@@ -1,5 +1,5 @@
 # SeeedWioTerminalTestRun
-Demos for Seeed's Wio Terminal using Arduino IDE
+Demo for Seeed's Wio Terminal using Arduino IDE
 
 ![Seeed Wio Terminal](https://github.com/haydnady/SeeedWioTerminalTestRun/blob/master/img/Wio-Terminal.jpg)
 
