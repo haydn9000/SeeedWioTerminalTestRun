@@ -6,4 +6,5 @@ Demos for Seeed's Wio Terminal using Arduino IDE
 
 
 [Wio Terminal Link](https://wiki.seeedstudio.com/Wio-Terminal-Getting-Started/ "Wio Terminal Get Started Page from Seeed")
-Follow instruction from page above to install borad library in Arduino IDE
+
+Instruction to install board library in Arduino IDE is also on same page from link above.
