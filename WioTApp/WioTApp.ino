@@ -6,7 +6,9 @@ TFT_eSPI tft;
 TFT_eSprite spr = TFT_eSprite(&tft); // Buffer
 
 static LCDBackLight backLight;
-int maxBrightness = backLight.getMaxBrightness(); // Max brightness
+int maxBrightness = backLight.getMaxBrightness(); // Max brightness (100)
+int defaultBrightness = 25;
+char optionTest = 'C';
 
 //========================================================================= SETUP
 void setup()
@@ -16,7 +18,7 @@ void setup()
   spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer
 
   backLight.initialize();
-  backLight.setBrightness(25); // Max brightness is 100.
+  backLight.setBrightness(defaultBrightness);
 
   // Top 3 button inputs, far right button is A, middle B, left C.
   pinMode(WIO_KEY_A, INPUT);
@@ -33,5 +35,30 @@ void setup()
 //========================================================================= LOOP
 void loop()
 { 
-  homeScreen();
+    if (digitalRead(WIO_KEY_A) == LOW)
+    {
+      optionTest = 'A';
+    }
+    else if (digitalRead(WIO_KEY_B) == LOW)
+    {
+      optionTest = 'B';
+    }
+    else if (digitalRead(WIO_KEY_C) == LOW)
+    {
+      optionTest = 'C';
+    }
+  
+  
+  switch (optionTest)
+  {
+    case 'A':
+      setBrightness();
+      break;
+    case 'B':
+      covidDataMA();
+      break;
+    case 'C':
+      homeScreen();
+      break;
+  }
 }
