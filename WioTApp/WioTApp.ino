@@ -58,6 +58,7 @@ void loop()
       covidDataMA();
       break;
     case 'C':
+    spr.drawString("SSSSSSSSSSSS", 30, 100);
       homeScreen();
       break;
   }
