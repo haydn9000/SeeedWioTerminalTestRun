@@ -1,8 +1,5 @@
 #include <TFT_eSPI.h>
-#include "lcd_backlight.hpp"
-#include <Adafruit_GFX.h>
-#include "bitmapImages.c"
-using namespace std;
+#include "bitmapImages.h"
 
 #define BLACK   0x0000
 #define BLUE    0x001F
@@ -17,8 +14,8 @@ using namespace std;
 TFT_eSPI tft;
 TFT_eSprite spr = TFT_eSprite(&tft); // Buffer
 
-static LCDBackLight backLight;
-int maxBrightness = backLight.getMaxBrightness(); // Max brightness
+//static LCDBackLight backLight;
+//int maxBrightness = backLight.getMaxBrightness(); // Max brightness
 
 void setup() 
 {
@@ -26,8 +23,12 @@ void setup()
     tft.setRotation(3);
     spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer
 
-    backLight.initialize();
-    backLight.setBrightness(50); // Max brightness is 100.
+//    backLight.initialize();
+//    backLight.setBrightness(50); // Max brightness is 100.
+
+
+    // Draw the icons
+    tft.pushImage(100, 100, 100, 95, homeIcon);
 
     // Top 3 button inputs, far right button is A, middle B, left C.
     pinMode(WIO_KEY_A, INPUT);
@@ -40,7 +41,7 @@ void drawHome()
   spr.fillSprite(tft.color565(255, 0, 0));
   spr.setTextSize(2);
 
-  spr.drawBitmap(10, 15, homeBitmap, 100, 95, ); 
+//  spr.drawXbm(110, 0, 100, 95, houseIcon);
 
   spr.pushSprite(0, 0);
   delay(200);
@@ -48,5 +49,5 @@ void drawHome()
 
 void loop() 
 {
-  setBrightness();
+  
 }
