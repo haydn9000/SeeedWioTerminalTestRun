@@ -9,7 +9,7 @@
 #define MAGENTA 0xF81F
 #define YELLOW  0xFFE0
 #define WHITE   0xFFFF
-#define GREY     0xD6BA
+#define GREY    0xD6BA
 
 TFT_eSPI tft;
 TFT_eSprite spr = TFT_eSprite(&tft); // Buffer
@@ -25,30 +25,15 @@ void setup()
   
   spr.fillSprite(tft.color565(255, 0, 0));
   
-  // Draw the icons
-  spr.pushImage(0, 0, 320, 240, spongebob);
-//  displayImage();
-    
-  
-  spr.pushSprite(0, 0);
-
-  
-  // Top 3 button inputs, far right button is A, middle B, left C.
-  pinMode(WIO_KEY_A, INPUT);
-  pinMode(WIO_KEY_B, INPUT);
-  pinMode(WIO_KEY_C, INPUT);
-  // 5 Way switch
-  pinMode(WIO_5S_UP, INPUT_PULLUP);
-  pinMode(WIO_5S_DOWN, INPUT_PULLUP);
-  pinMode(WIO_5S_LEFT, INPUT_PULLUP);
-  pinMode(WIO_5S_RIGHT, INPUT_PULLUP);
-  pinMode(WIO_5S_PRESS, INPUT_PULLUP);
+  // Draw the image
+  displayImage();
 }
 
 //========================================================================= Functions
 void displayImage()
 {
-  
+  spr.pushImage(0, 0, 320, 240, spongebob);
+  spr.pushSprite(0, 0);
 }
 
 //========================================================================= LOOP
