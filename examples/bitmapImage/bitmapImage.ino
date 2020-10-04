@@ -1,20 +1,10 @@
 #include <TFT_eSPI.h>
-#include "bitmapImages.h"
+#include "spongebobImage.h"
 
-#define BLACK   0x0000
-#define BLUE    0x001F
-#define RED     0xF800
-#define GREEN   0x07E0
-#define CYAN    0x07FF
-#define MAGENTA 0xF81F
-#define YELLOW  0xFFE0
-#define WHITE   0xFFFF
-#define GREY    0xD6BA
 
 TFT_eSPI tft;
 TFT_eSprite spr = TFT_eSprite(&tft); // Buffer
 
-char optionTest = 'C';
 
 //========================================================================= SETUP
 void setup()
@@ -23,18 +13,21 @@ void setup()
   tft.setRotation(3);
   spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer
   
-  spr.fillSprite(tft.color565(255, 0, 0));
+  spr.fillSprite(tft.color565(0, 0, 255));
   
   // Draw the image
   displayImage();
 }
 
+
 //========================================================================= Functions
 void displayImage()
 {
-  spr.pushImage(0, 0, 320, 240, spongebob);
+  spr.fillSprite(tft.color565(0, 0, 255));
+  spr.pushImage(0, 0, spongebobWidth, spongebobHeight, spongebob);
   spr.pushSprite(0, 0);
 }
+
 
 //========================================================================= LOOP
 void loop()
