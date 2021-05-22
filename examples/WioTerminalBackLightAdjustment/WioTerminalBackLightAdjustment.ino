@@ -1,9 +1,9 @@
-#include <TFT_eSPI.h>
-#include "lcd_backlight.hpp"
+#include <TFT_eSPI.h>  // Include TFT LCD library.
+#include "lcd_backlight.hpp"  // Include TFT LCD backlight library.
 
 using namespace std;
 
-TFT_eSPI tft;
+TFT_eSPI tft;  // Initialize TFT LCD.
 TFT_eSprite spr = TFT_eSprite(&tft); // Buffer
 
 static LCDBackLight backLight;
@@ -11,9 +11,9 @@ int maxBrightness = backLight.getMaxBrightness(); // Max brightness
 
 void setup() 
 {
-    tft.begin();
-    tft.setRotation(3);
-    spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer
+    tft.begin();  // Start TFT LCD.
+    tft.setRotation(3);  // Set screen rotation.
+    spr.createSprite(TFT_HEIGHT, TFT_WIDTH);  // Create buffer.
 
     backLight.initialize();
     backLight.setBrightness(50); // Max brightness is 100.

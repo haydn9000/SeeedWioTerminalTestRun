@@ -1,8 +1,8 @@
-#include <TFT_eSPI.h>
+#include <TFT_eSPI.h>  // Include TFT LCD library.
 #include "spongebobImage.h"
 #include "lcd_backlight.hpp"
 
-TFT_eSPI tft;
+TFT_eSPI tft;  // Initialize TFT LCD.
 TFT_eSprite spr = TFT_eSprite(&tft); // Buffer
 
 static LCDBackLight backLight;
@@ -10,8 +10,8 @@ static LCDBackLight backLight;
 //========================================================================= SETUP
 void setup()
 {
-  tft.begin();
-  tft.setRotation(3);
+  tft.begin();  // Start TFT LCD.
+  tft.setRotation(3);  // Set screen rotation.
   spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer
 
   backLight.initialize();
@@ -19,7 +19,7 @@ void setup()
   
   spr.fillSprite(tft.color565(0, 0, 255));
   
-  // Draw the image
+  // Draw the image.
   displayImage();
 }
 

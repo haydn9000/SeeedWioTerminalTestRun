@@ -1,23 +1,23 @@
-#include "TFT_eSPI.h" //include TFT LCD library 
-#include "Seeed_FS.h" //include file system library 
-#include "RawImage.h" //include raw image library
+#include "TFT_eSPI.h"  // Include TFT LCD library 
+#include "Seeed_FS.h"  // Include file system library 
+#include "RawImage.h"  // Include raw image library
 
-TFT_eSPI tft; //initialize TFT LCD 
+TFT_eSPI tft;  // Initialize TFT LCD 
 
 
 //========================================================================= SETUP
 void setup()
 {
-    //check whether SD card is inserted and working
+    // Check whether SD card is inserted and working
     if (!SD.begin(SDCARD_SS_PIN, SDCARD_SPI))
     {
         while (1);
     }
 
-    tft.begin();
-    tft.setRotation(3);
+    tft.begin();  // Start TFT LCD.
+    tft.setRotation(3);  // Set screen rotation.
 
-    drawImage<uint8_t>("glicth.bmp", 0, 0);
+    drawImage<uint8_t>("glicth.bmp", 0, 0);  // Display image on LCD.
 }
 
 //========================================================================= LOOP
