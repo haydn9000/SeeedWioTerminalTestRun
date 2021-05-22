@@ -14,7 +14,8 @@ void setup()
   tft.setRotation(3);
   spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer
 
-  backLight.setBrightness(50);
+  backLight.initialize();
+  backLight.setBrightness(25); // Max brightness is 100.
   
   spr.fillSprite(tft.color565(0, 0, 255));
   
