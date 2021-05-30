@@ -2,7 +2,7 @@ from PIL import Image
 import os
 
 
-class ConverBMP:
+class ConvertBMP:
 
     def rgb332(self, r, g, b):
         r = r >> 5
@@ -20,11 +20,11 @@ class ConverBMP:
         return [c >> 8, c & 0xff]
 
 
-    def convert(self, rgbType, fileDir, saveDir):
-        saveDir = os.path.join(fileDir, saveDir)
+    def convert(self, rgbType, fileDir, saveDirName):
+        saveDirName = os.path.join(fileDir, saveDirName)
 
-        if not os.path.exists(saveDir):
-            os.mkdir(saveDir)
+        if not os.path.exists(saveDirName):
+            os.mkdir(saveDirName)
 
         for _, _, filesnames in os.walk(fileDir):
             for file in filesnames:
@@ -44,7 +44,7 @@ class ConverBMP:
                     for i in pair:
                         b.append(i)
 
-                f = open(os.fileDir.join(saveDir, file), "wb")
+                f = open(os.fileDir.join(saveDirName, file), "wb")
                 f.write(b)
                 f.close()
             break
@@ -54,16 +54,16 @@ class ConverBMP:
         option = int(input("Enter (1) for 8-bit colour convert, Enter (2) for 16-bit colour convert\n"))
 
         if option == 1:
-            saveDir = "rgb332"
-            return self.rgb332, saveDir
+            saveDirName = "rgb332"
+            return self.rgb332, saveDirName
         elif option == 2:
-            saveDir = "rgb565"
-            return self.rgb565, saveDir
+            saveDirName = "rgb565"
+            return self.rgb565, saveDirName
         else:
             print("Invalid input!")
 
 
 if __name__ == "__main__":
-    convert = ConverBMP()
-    rgbType, saveDir = convert.choose();
-    convert.convert(rgbType, "bmp", saveDir)
+    convert = ConvertBMP()
+    rgbType, saveDirName = convert.choose();
+    convert.convert(rgbType, "bmp", saveDirName)
