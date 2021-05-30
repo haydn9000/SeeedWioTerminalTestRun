@@ -33,12 +33,27 @@
 }</string>
       </property>
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::NoFrame</enum>
       </property>
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
+      <property name="lineWidth">
+       <number>0</number>
+      </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="leftMargin">
+        <number>1</number>
+       </property>
+       <property name="topMargin">
+        <number>1</number>
+       </property>
+       <property name="rightMargin">
+        <number>1</number>
+       </property>
+       <property name="bottomMargin">
+        <number>1</number>
+       </property>
        <item>
         <layout class="QGridLayout" name="gridLayout">
          <property name="verticalSpacing">
@@ -47,7 +62,7 @@
          <item row="1" column="1">
           <widget class="QLineEdit" name="lineEdit_2">
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: rgb(214, 214, 214);</string>
            </property>
           </widget>
          </item>
@@ -74,7 +89,7 @@
          <item row="2" column="1">
           <widget class="QLineEdit" name="lineEdit">
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: rgb(214, 214, 214);</string>
            </property>
           </widget>
          </item>
