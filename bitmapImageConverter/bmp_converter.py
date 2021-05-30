@@ -21,8 +21,9 @@ class ConvertBMP:
         return [c >> 8, c & 0xff]
 
 
-    def convert(self, rgbType, fileDir, saveDirName):
-        saveDirName = os.path.join(fileDir, saveDirName)
+    def convert(self, rgbType, fileDir, saveDirName, autoSavetoCurrentDir=False):
+        if autoSavetoCurrentDir:
+            saveDirName = os.path.join(fileDir, saveDirName)
 
         if not os.path.exists(saveDirName):
             os.mkdir(saveDirName)
@@ -67,10 +68,11 @@ class ConvertBMP:
 class BMPProcessingThread(QThread):
     message = Signal(str)
 
-    def __init__(self, rgbType, saveDirName, parent=None):
+    def __init__(self, rgbType, fileDir, saveDirName, parent=None):
         QThread.__init__(self, parent)
 
         self.rgbType = rgbType
+        self.fileDir = fileDir
         self.saveDirName = saveDirName
 
 
@@ -96,13 +98,18 @@ class BMPProcessingThread(QThread):
 
     # Processing function
     def convertBMP(self):
+        self.message.emit("Processing...")
+
         convert = ConvertBMP()
         rgbType = convert.rgb332 if (self.rgbType == 1) else convert.rgb565
-        convert.convert(rgbType, "bmp", self.saveDirName)
+        subDirName = "rgb332" if (self.rgbType == 1) else "rgb565"
+        saveDirName = os.path.join(self.saveDirName, subDirName)
+
+        convert.convert(rgbType, self.fileDir, saveDirName)
         self.message.emit("Process complete")
 
 
 if __name__ == "__main__":
     convert = ConvertBMP()
     rgbType, saveDirName = convert.choose()
-    convert.convert(rgbType, "bmp", saveDirName)
+    convert.convert(rgbType, "bmp", saveDirName, autoSavetoCurrentDir=True)

@@ -4,9 +4,9 @@
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
 from WioTerminalBitmapConverterGUI import Ui_MainWindow
-from bmp_converter import BMPProcessingThread
 from os.path import expanduser
 from PySide6 import QtCore
+import bmp_converter
 import sys
 import os
 
@@ -21,7 +21,7 @@ class TheApp(QMainWindow, Ui_MainWindow):
         # Threads/controllers
         self.dataProcessingWorkerThread = None
 
-        self.InputLineEdit.setText(self.userDesktop)
+        self.OutputLineEdit.setText(self.userDesktop)
 
         # Connect slots/callbacks
         self.InputBrowsePushButton.clicked.connect(self.getInputDir)
@@ -31,37 +31,44 @@ class TheApp(QMainWindow, Ui_MainWindow):
 
     # ============================================ Functions =================================================
     def startConversion(self):
-        rgbType = self.InputLineEdit.text()
+        rgbType = self.radioButton.isChecked()
+        fileDir = self.InputLineEdit.text()
         saveDirName = self.OutputLineEdit.text()
 
         # Start data processing thread
-        self.dataProcessingWorkerThread = BMPProcessingThread(rgbType, saveDirName)
+        self.dataProcessingWorkerThread = bmp_converter.BMPProcessingThread(rgbType, fileDir, saveDirName)
+        self.dataProcessingWorkerThread.start()
 
         # Update textBrowser (signal/slot for progress window)
-        self.generalAnalysesWorkerThread.message.connect(self.updateTextBrowser)
-        self.generalAnalysesWorkerThread.finished.connect(self.stopRunningThread)
+        self.dataProcessingWorkerThread.message.connect(self.updateTextBrowser)
+        self.dataProcessingWorkerThread.finished.connect(self.stopRunningThread)
 
 
-    def stopRunningThreads(self):
+    def stopRunningThread(self):
         if self.dataProcessingWorkerThread != None:
             self.dataProcessingWorkerThread.stop()
             self.dataProcessingWorkerThread = None
 
 
     def updateTextBrowser(self, message):
-        self.StatusLabel.setText("Status:\n", message)
+        self.StatusLabel.setText(f"Status:\n{message} ✔")
 
 
     def getInputDir(self):
-        dir = QFileDialog.getExistingDirectory(None, "Open Directory", "/home", "Images (*.bmp)")
-        self.InputLineEdit.setText(dir)
+        dir = QFileDialog.getExistingDirectory(None, "Select folder", self.userDesktop)
+
+        if dir:
+            path = dir.replace("/", "\\")
+            self.InputLineEdit.setText(path)
 
 
     def getOuputDir(self):
-        dir = QFileDialog.getExistingDirectory(None, "Open Directory", "/home", "Images (*.bmp)")
-        self.OutputLineEdit.setText(dir)
-        
+        dir = QFileDialog.getExistingDirectory(None, "Select save folder location", self.userDesktop)
 
+        if dir:
+            path = dir.replace("/", "\\")
+            self.OutputLineEdit.setText(path)
+        
 
 if __name__ == "__main__":
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"      # For High DPI Displays
