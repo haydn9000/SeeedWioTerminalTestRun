@@ -1,5 +1,6 @@
 # VS Code settings
 .vscode
 
-# Python virtual environment
+# Python virtual environment and other python related files
 venv
+__pycache__/
