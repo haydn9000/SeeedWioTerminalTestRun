@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>485</width>
-    <height>224</height>
+    <height>269</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -60,6 +60,40 @@ color: rgb(144, 216, 0);</string>
          <property name="verticalSpacing">
           <number>20</number>
          </property>
+         <item row="2" column="2">
+          <widget class="QLineEdit" name="InputLineEdit">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(214, 214, 214);</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="3">
+          <widget class="QPushButton" name="InputBrowsePushButton">
+           <property name="styleSheet">
+            <string notr="true"/>
+           </property>
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="2">
+          <widget class="QLineEdit" name="OutputLineEdit">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(214, 214, 214);</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="3">
+          <widget class="QPushButton" name="InputBrowsePushButton_2">
+           <property name="styleSheet">
+            <string notr="true"/>
+           </property>
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
          <item row="2" column="0">
           <widget class="QLabel" name="label">
            <property name="styleSheet">
@@ -108,13 +142,22 @@ color: rgb(144, 216, 0);</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="3">
-          <widget class="QPushButton" name="InputBrowsePushButton_2">
+         <item row="8" column="0" colspan="3">
+          <widget class="QLabel" name="StatusLabel">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
            <property name="styleSheet">
             <string notr="true"/>
            </property>
            <property name="text">
-            <string>Browse</string>
+            <string>Status:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
            </property>
           </widget>
          </item>
@@ -170,46 +213,10 @@ color: rgb(144, 216, 0);</string>
            </item>
           </layout>
          </item>
-         <item row="2" column="3">
-          <widget class="QPushButton" name="InputBrowsePushButton">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
+         <item row="4" column="2">
+          <widget class="QPushButton" name="ProcessPushButton">
            <property name="text">
-            <string>Browse</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0" colspan="3">
-          <widget class="QLabel" name="StatusLabel">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="text">
-            <string>Status:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QLineEdit" name="InputLineEdit">
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(214, 214, 214);</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="2">
-          <widget class="QLineEdit" name="OutputLineEdit">
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(214, 214, 214);</string>
+            <string>Process</string>
            </property>
           </widget>
          </item>
@@ -228,6 +235,7 @@ color: rgb(144, 216, 0);</string>
   <tabstop>InputBrowsePushButton</tabstop>
   <tabstop>OutputLineEdit</tabstop>
   <tabstop>InputBrowsePushButton_2</tabstop>
+  <tabstop>ProcessPushButton</tabstop>
  </tabstops>
  <resources/>
  <connections/>
