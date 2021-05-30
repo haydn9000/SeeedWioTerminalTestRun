@@ -28,10 +28,10 @@ class ConvertBMP:
 
         for _, _, filesnames in os.walk(fileDir):
             for file in filesnames:
-                if (os.fileDir.splitext(file)[-1] != ".bmp"):
+                if (os.path.splitext(file)[-1] != ".bmp"):
                     continue
 
-                im = Image.open(os.fileDir.join(fileDir, file))
+                im = Image.open(os.path.join(fileDir, file))
                 width, height = im.size
                 v = [rgbType(r, g, b) for (r, g, b) in im.getdata()]
                 b = bytearray()
@@ -44,7 +44,7 @@ class ConvertBMP:
                     for i in pair:
                         b.append(i)
 
-                f = open(os.fileDir.join(saveDirName, file), "wb")
+                f = open(os.path.join(saveDirName, file), "wb")
                 f.write(b)
                 f.close()
             break
