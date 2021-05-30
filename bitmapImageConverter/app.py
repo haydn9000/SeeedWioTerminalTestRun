@@ -3,8 +3,8 @@
 """
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
-from WioTerminalBitmapConverterGUI import Ui_MainWindow
 from os.path import expanduser
+from ui import Ui_MainWindow
 from PySide6 import QtCore
 import bmp_converter
 import sys
