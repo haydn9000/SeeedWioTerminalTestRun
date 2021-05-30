@@ -42,7 +42,8 @@ class Ui_MainWindow(object):
         self.gridLayout.setVerticalSpacing(20)
         self.InputLineEdit = QLineEdit(self.frame)
         self.InputLineEdit.setObjectName(u"InputLineEdit")
-        self.InputLineEdit.setStyleSheet(u"background-color: rgb(214, 214, 214);")
+        self.InputLineEdit.setStyleSheet(u"background-color: rgb(214, 214, 214);\n"
+"color: rgb(0, 0, 0);")
 
         self.gridLayout.addWidget(self.InputLineEdit, 2, 2, 1, 1)
 
@@ -54,15 +55,16 @@ class Ui_MainWindow(object):
 
         self.OutputLineEdit = QLineEdit(self.frame)
         self.OutputLineEdit.setObjectName(u"OutputLineEdit")
-        self.OutputLineEdit.setStyleSheet(u"background-color: rgb(214, 214, 214);")
+        self.OutputLineEdit.setStyleSheet(u"background-color: rgb(214, 214, 214);\n"
+"color: rgb(0, 0, 0);")
 
         self.gridLayout.addWidget(self.OutputLineEdit, 3, 2, 1, 1)
 
-        self.InputBrowsePushButton_2 = QPushButton(self.frame)
-        self.InputBrowsePushButton_2.setObjectName(u"InputBrowsePushButton_2")
-        self.InputBrowsePushButton_2.setStyleSheet(u"")
+        self.OutputBrowsePushButton = QPushButton(self.frame)
+        self.OutputBrowsePushButton.setObjectName(u"OutputBrowsePushButton")
+        self.OutputBrowsePushButton.setStyleSheet(u"")
 
-        self.gridLayout.addWidget(self.InputBrowsePushButton_2, 3, 3, 1, 1)
+        self.gridLayout.addWidget(self.OutputBrowsePushButton, 3, 3, 1, 1)
 
         self.label = QLabel(self.frame)
         self.label.setObjectName(u"label")
@@ -141,8 +143,8 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.radioButton_2, self.InputLineEdit)
         QWidget.setTabOrder(self.InputLineEdit, self.InputBrowsePushButton)
         QWidget.setTabOrder(self.InputBrowsePushButton, self.OutputLineEdit)
-        QWidget.setTabOrder(self.OutputLineEdit, self.InputBrowsePushButton_2)
-        QWidget.setTabOrder(self.InputBrowsePushButton_2, self.ProcessPushButton)
+        QWidget.setTabOrder(self.OutputLineEdit, self.OutputBrowsePushButton)
+        QWidget.setTabOrder(self.OutputBrowsePushButton, self.ProcessPushButton)
 
         self.retranslateUi(MainWindow)
 
@@ -152,7 +154,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"ConvertBMP", None))
         self.InputBrowsePushButton.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
-        self.InputBrowsePushButton_2.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
+        self.OutputBrowsePushButton.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"Input Dir:", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"Ouput Dir:", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"Wio Teminal \"Special\" Bitmap Converter", None))
