@@ -84,7 +84,6 @@ class BMPProcessingThread(QThread):
     def run(self):
         try:
             self.convertBMP()
-
         except Exception as e:
             self.message.emit(f"<b style=color:LightCoral;>{e}<br></b>")
 
