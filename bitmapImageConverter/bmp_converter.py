@@ -20,18 +20,18 @@ class ConverBMP:
         return [c >> 8, c & 0xff]
 
 
-    def convert(self, rgbType, filePath, savePathName):
-        savePathName = os.filePath.join(filePath, savePathName)
+    def convert(self, rgbType, fileDir, saveDir):
+        saveDir = os.path.join(fileDir, saveDir)
 
-        if not os.filePath.exists(savePathName):
-            os.mkdir(savePathName)
+        if not os.path.exists(saveDir):
+            os.mkdir(saveDir)
 
-        for _, _, filesnames in os.walk(filePath):
+        for _, _, filesnames in os.walk(fileDir):
             for file in filesnames:
-                if (os.filePath.splitext(file)[-1] != ".bmp"):
+                if (os.fileDir.splitext(file)[-1] != ".bmp"):
                     continue
 
-                im = Image.open(os.filePath.join(filePath, file))
+                im = Image.open(os.fileDir.join(fileDir, file))
                 width, height = im.size
                 v = [rgbType(r, g, b) for (r, g, b) in im.getdata()]
                 b = bytearray()
@@ -44,7 +44,7 @@ class ConverBMP:
                     for i in pair:
                         b.append(i)
 
-                f = open(os.filePath.join(savePathName, file), "wb")
+                f = open(os.fileDir.join(saveDir, file), "wb")
                 f.write(b)
                 f.close()
             break
@@ -54,16 +54,16 @@ class ConverBMP:
         option = int(input("Enter (1) for 8-bit colour convert, Enter (2) for 16-bit colour convert\n"))
 
         if option == 1:
-            savePathName = "rgb332"
-            return self.rgb332, savePathName
+            saveDir = "rgb332"
+            return self.rgb332, saveDir
         elif option == 2:
-            savePathName = "rgb565"
-            return self.rgb565, savePathName
+            saveDir = "rgb565"
+            return self.rgb565, saveDir
         else:
             print("Invalid input!")
 
 
 if __name__ == "__main__":
     convert = ConverBMP()
-    rgbType, savePathName = convert.choose();
-    convert.convert(rgbType, "bmp", savePathName)
+    rgbType, saveDir = convert.choose();
+    convert.convert(rgbType, "bmp", saveDir)
