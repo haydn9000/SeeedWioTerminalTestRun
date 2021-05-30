@@ -21,14 +21,18 @@ class TheApp(QMainWindow, Ui_MainWindow):
         # Threads/controllers
         self.dataProcessingWorkerThread = None
 
+        self.InputLineEdit.setText(self.userDesktop)
+
         # Connect slots/callbacks
-        # self.PushButton.clicked.connect(self.startThreads)
+        self.InputBrowsePushButton.clicked.connect(self.getInputDir)
+        self.OutputBrowsePushButton.clicked.connect(self.getOuputDir)
+        self.ProcessPushButton.clicked.connect(self.startConversion)
 
 
     # ============================================ Functions =================================================
     def startConversion(self):
-        rgbType = self.InputLineEdit.currentText()
-        saveDirName = self.OutputLineEdit.currentText()
+        rgbType = self.InputLineEdit.text()
+        saveDirName = self.OutputLineEdit.text()
 
         # Start data processing thread
         self.dataProcessingWorkerThread = BMPProcessingThread(rgbType, saveDirName)
@@ -45,14 +49,18 @@ class TheApp(QMainWindow, Ui_MainWindow):
 
 
     def updateTextBrowser(self, message):
-        print(message)
+        self.StatusLabel.setText("Status:\n", message)
 
 
-    def getInputDir():
-        pass
+    def getInputDir(self):
+        dir = QFileDialog.getExistingDirectory(None, "Open Directory", "/home", "Images (*.bmp)")
+        self.InputLineEdit.setText(dir)
 
-    def getOuputDir():
-        pass
+
+    def getOuputDir(self):
+        dir = QFileDialog.getExistingDirectory(None, "Open Directory", "/home", "Images (*.bmp)")
+        self.OutputLineEdit.setText(dir)
+        
 
 
 if __name__ == "__main__":
