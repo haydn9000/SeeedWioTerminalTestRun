@@ -7,20 +7,21 @@
     <x>0</x>
     <y>0</y>
     <width>485</width>
-    <height>200</height>
+    <height>224</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>485</width>
-    <height>200</height>
+    <height>224</height>
    </size>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>ConvertBMP</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-color: #354f58;</string>
+   <string notr="true">background-color: #354f58;
+color: rgb(144, 216, 0);</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -59,83 +60,30 @@
          <property name="verticalSpacing">
           <number>20</number>
          </property>
-         <item row="1" column="1">
-          <widget class="QLineEdit" name="lineEdit_2">
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(214, 214, 214);</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QPushButton" name="pushButton_2">
-           <property name="styleSheet">
-            <string notr="true">color: rgb(144, 216, 0);</string>
-           </property>
-           <property name="text">
-            <string>Browse</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QPushButton" name="pushButton">
-           <property name="styleSheet">
-            <string notr="true">color: rgb(144, 216, 0);</string>
-           </property>
-           <property name="text">
-            <string>Browse</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="lineEdit">
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(214, 214, 214);</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
+         <item row="2" column="0">
           <widget class="QLabel" name="label">
            <property name="styleSheet">
-            <string notr="true">color: rgb(144, 216, 0);</string>
+            <string notr="true"/>
            </property>
            <property name="text">
-            <string>Input File</string>
+            <string>Input Dir:</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
+         <item row="3" column="0">
           <widget class="QLabel" name="label_2">
            <property name="styleSheet">
-            <string notr="true">color: rgb(144, 216, 0);</string>
+            <string notr="true"/>
            </property>
            <property name="text">
-            <string>Ouput Folder</string>
+            <string>Ouput Dir:</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="0" colspan="2">
-          <widget class="QLabel" name="label_4">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">color: rgb(144, 216, 0);</string>
-           </property>
-           <property name="text">
-            <string>Status:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0" colspan="3">
+         <item row="0" column="0" colspan="4">
           <widget class="QLabel" name="label_3">
            <property name="maximumSize">
             <size>
@@ -150,13 +98,118 @@
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">color: rgb(144, 216, 0);</string>
+            <string notr="true"/>
            </property>
            <property name="text">
             <string>Wio Teminal &quot;Special&quot; Bitmap Converter</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="3">
+          <widget class="QPushButton" name="InputBrowsePushButton_2">
+           <property name="styleSheet">
+            <string notr="true"/>
+           </property>
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <item>
+            <widget class="QLabel" name="label_5">
+             <property name="text">
+              <string>Convert to:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+             <property name="margin">
+              <number>0</number>
+             </property>
+             <property name="indent">
+              <number>10</number>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="radioButton">
+             <property name="maximumSize">
+              <size>
+               <width>100</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="layoutDirection">
+              <enum>Qt::LeftToRight</enum>
+             </property>
+             <property name="autoFillBackground">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>8 Bit Color</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="radioButton_2">
+             <property name="text">
+              <string>16 Bit Color</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="2" column="3">
+          <widget class="QPushButton" name="InputBrowsePushButton">
+           <property name="styleSheet">
+            <string notr="true"/>
+           </property>
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="0" colspan="3">
+          <widget class="QLabel" name="StatusLabel">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true"/>
+           </property>
+           <property name="text">
+            <string>Status:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QLineEdit" name="InputLineEdit">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(214, 214, 214);</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="2">
+          <widget class="QLineEdit" name="OutputLineEdit">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(214, 214, 214);</string>
            </property>
           </widget>
          </item>
@@ -168,6 +221,14 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>radioButton</tabstop>
+  <tabstop>radioButton_2</tabstop>
+  <tabstop>InputLineEdit</tabstop>
+  <tabstop>InputBrowsePushButton</tabstop>
+  <tabstop>OutputLineEdit</tabstop>
+  <tabstop>InputBrowsePushButton_2</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
