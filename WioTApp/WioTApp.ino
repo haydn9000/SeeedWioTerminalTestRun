@@ -1,5 +1,7 @@
-#include <TFT_eSPI.h>  // Include TFT LCD library.
-#include "lcd_backlight.hpp"  // Include TFT LCD backlight library.
+#include <TFT_eSPI.h>          //  Include TFT LCD library.
+#include "lcd_backlight.hpp"   //  Include TFT LCD backlight library.
+#include "Seeed_FS.h"          //  Include file system library.
+#include "RawImage.h"          //  Include raw image library.
 
 using namespace std;
 
@@ -38,14 +40,17 @@ void loop()
 { 
     if (digitalRead(WIO_KEY_A) == LOW)
     {
+      drawImage<uint16_t>("settings.bmp", 0, 0);  // Display image on LCD.
       optionTest = 'A';
     }
     else if (digitalRead(WIO_KEY_B) == LOW)
     {
+      drawImage<uint16_t>("settings.bmp", 0, 0);  // Display image on LCD.
       optionTest = 'B';
     }
     else if (digitalRead(WIO_KEY_C) == LOW)
     {
+      drawImage<uint16_t>("settings.bmp", 0, 0);  // Display image on LCD.
       optionTest = 'C';
     }
   
