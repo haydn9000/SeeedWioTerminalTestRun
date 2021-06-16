@@ -40,32 +40,32 @@ void loop()
 { 
     if (digitalRead(WIO_KEY_A) == LOW)
     {
-      drawImage<uint16_t>("settings.bmp", 0, 0);  // Display image on LCD.
+      drawImage<uint16_t>("tv_icon.bmp", 0, 0);  // Display image on LCD.
       optionTest = 'A';
     }
     else if (digitalRead(WIO_KEY_B) == LOW)
     {
-      drawImage<uint16_t>("settings.bmp", 0, 0);  // Display image on LCD.
+      drawImage<uint16_t>("secon_icon.bmp", 0, 0);  // Display image on LCD.
       optionTest = 'B';
     }
     else if (digitalRead(WIO_KEY_C) == LOW)
     {
-      drawImage<uint16_t>("settings.bmp", 0, 0);  // Display image on LCD.
+      drawImage<uint16_t>("settings_icon.bmp", 0, 0);  // Display image on LCD.
       optionTest = 'C';
     }
   
   
-  switch (optionTest)
-  {
-    case 'A':
-      setBrightness();
-      break;
-    case 'B':
-      covidDataMA();
-      break;
-    case 'C':
-    spr.drawString("SSSSSSSSSSSS", 30, 100);
-      homeScreen();
-      break;
-  }
+  // switch (optionTest)
+  // {
+  //   case 'A':
+  //     setBrightness();
+  //     break;
+  //   case 'B':
+  //     covidDataMA();
+  //     break;
+  //   case 'C':
+  //   spr.drawString("SSSSSSSSSSSS", 30, 100);
+  //     homeScreen();
+  //     break;
+  // }
 }
