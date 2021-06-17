@@ -46,6 +46,7 @@ void setup()
 //========================================================================= LOOP
 void loop()
 { 
+  setBrightness();
     // if (digitalRead(WIO_KEY_A) == LOW)
     // {
     //   drawImage<uint16_t>("tv_icon.bmp", 0, 0);  // Display image on LCD.
