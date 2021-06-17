@@ -17,7 +17,7 @@ void setup()
     tft.begin();  // Start TFT LCD.
     tft.setRotation(3);  // Set screen rotation.
 
-    drawImage<uint16_t>("settings.bmp", 0, 0);  // Display image on LCD.
+    drawImage<uint16_t>("setting_icon.bmp", 0, 0);  // Display image on LCD.
 }
 
 //========================================================================= LOOP

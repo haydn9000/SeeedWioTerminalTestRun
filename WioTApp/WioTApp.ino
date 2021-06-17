@@ -24,13 +24,13 @@ void setup()
   backLight.setBrightness(defaultBrightness);
 
   // Check whether SD card is inserted and working
-  if (!SD.begin(SDCARD_SS_PIN, SDCARD_SPI))
-  {
-    while (1);
-  }
+  // if (!SD.begin(SDCARD_SS_PIN, SDCARD_SPI))
+  // {
+  //   while (1);
+  // }
 
-  drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
-
+  // drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
+  setBrightness();
   // Top 3 button inputs, far right button is A, middle B, left C.
   pinMode(WIO_KEY_A, INPUT);
   pinMode(WIO_KEY_B, INPUT);
@@ -46,21 +46,21 @@ void setup()
 //========================================================================= LOOP
 void loop()
 { 
-    if (digitalRead(WIO_KEY_A) == LOW)
-    {
-      drawImage<uint16_t>("tv_icon.bmp", 0, 0);  // Display image on LCD.
-      optionTest = 'A';
-    }
-    else if (digitalRead(WIO_KEY_B) == LOW)
-    {
-      drawImage<uint16_t>("secon_icon.bmp", 0, 0);  // Display image on LCD.
-      optionTest = 'B';
-    }
-    else if (digitalRead(WIO_KEY_C) == LOW)
-    {
-      drawImage<uint16_t>("settings_icon.bmp", 0, 0);  // Display image on LCD.
-      optionTest = 'C';
-    }
+    // if (digitalRead(WIO_KEY_A) == LOW)
+    // {
+    //   drawImage<uint16_t>("tv_icon.bmp", 0, 0);  // Display image on LCD.
+    //   optionTest = 'A';
+    // }
+    // else if (digitalRead(WIO_KEY_B) == LOW)
+    // {
+    //   drawImage<uint16_t>("secon_icon.bmp", 0, 0);  // Display image on LCD.
+    //   optionTest = 'B';
+    // }
+    // else if (digitalRead(WIO_KEY_C) == LOW)
+    // {
+    //   drawImage<uint16_t>("settings_icon.bmp", 0, 0);  // Display image on LCD.
+    //   optionTest = 'C';
+    // }
   
   
   // switch (optionTest)
