@@ -3,8 +3,6 @@
 static int brightness = 25;
 void setBrightness()
 {
-  spr.createSprite(TFT_HEIGHT, TFT_WIDTH);  // Create buffer.
-  
   spr.fillSprite(tft.color565(255, 0, 0));
   spr.setTextSize(2);
   spr.setTextColor(TFT_WHITE);
