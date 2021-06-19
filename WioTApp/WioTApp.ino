@@ -16,6 +16,13 @@ char optionTest = 'C';
 //========================================================================= SETUP
 void setup()
 {
+
+  // Check whether SD card is inserted and working
+  if (!SD.begin(SDCARD_SS_PIN, SDCARD_SPI))
+  {
+    while (1);
+  }
+
   tft.begin();  // Start TFT LCD.
   tft.setRotation(3);  // Set screen rotation.
   spr.createSprite(TFT_HEIGHT, TFT_WIDTH);  // Create buffer.
@@ -23,14 +30,6 @@ void setup()
   backLight.initialize();
   backLight.setBrightness(defaultBrightness);
 
-  // Check whether SD card is inserted and working
-  // if (!SD.begin(SDCARD_SS_PIN, SDCARD_SPI))
-  // {
-  //   while (1);
-  // }
-
-  // drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
-  setBrightness();
   // Top 3 button inputs, far right button is A, middle B, left C.
   pinMode(WIO_KEY_A, INPUT);
   pinMode(WIO_KEY_B, INPUT);
@@ -41,12 +40,14 @@ void setup()
   pinMode(WIO_5S_LEFT, INPUT_PULLUP);
   pinMode(WIO_5S_RIGHT, INPUT_PULLUP);
   pinMode(WIO_5S_PRESS, INPUT_PULLUP);
+
+  drawImage<uint16_t>("setting_icon.bmp", 0, 0);  // Display image on LCD.
 }
 
 //========================================================================= LOOP
 void loop()
 { 
-  setBrightness();
+  // setBrightness();
     // if (digitalRead(WIO_KEY_A) == LOW)
     // {
     //   drawImage<uint16_t>("tv_icon.bmp", 0, 0);  // Display image on LCD.
