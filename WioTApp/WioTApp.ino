@@ -13,6 +13,7 @@ int maxBrightness = backLight.getMaxBrightness(); // Max brightness (100)
 int defaultBrightness = 25;
 char optionTest = 'C';
 
+
 //========================================================================= SETUP
 void setup()
 {
@@ -26,7 +27,7 @@ void setup()
   tft.begin();  // Start TFT LCD.
   tft.setRotation(3);  // Set screen rotation.
   // spr.createSprite(TFT_HEIGHT, TFT_WIDTH);  // Create buffer.
-
+  
   backLight.initialize();
   backLight.setBrightness(defaultBrightness);
 
@@ -44,27 +45,31 @@ void setup()
   drawImage<uint16_t>("setting_icon.bmp", 0, 0);  // Display image on LCD.
 }
 
+
+void navigation()
+{
+  if (digitalRead(WIO_KEY_C) == LOW)
+  {
+    drawImage<uint16_t>("background.bmp", 0, 0); // Display image on LCD.
+    optionTest = 'A';
+  }
+
+  else if (digitalRead(WIO_KEY_B) == LOW)
+  {
+    drawImage<uint16_t>("second_icon.bmp", 0, 0); // Display image on LCD.
+    optionTest = 'B';
+  }
+  else if (digitalRead(WIO_KEY_A) == LOW)
+  {
+    drawImage<uint16_t>("setting_icon.bmp", 0, 0); // Display image on LCD.
+    optionTest = 'A';
+  }
+}
+
+
 //========================================================================= LOOP
 void loop()
 { 
-    if (digitalRead(WIO_KEY_C) == LOW)
-    {
-      drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
-      optionTest = 'A';
-    }
-
-    else if (digitalRead(WIO_KEY_B) == LOW)
-    {
-      drawImage<uint16_t>("second_icon.bmp", 0, 0);  // Display image on LCD.
-      optionTest = 'B';
-    }
-    else if (digitalRead(WIO_KEY_A) == LOW)
-    {
-      drawImage<uint16_t>("setting_icon.bmp", 0, 0);  // Display image on LCD.
-      optionTest = 'A';
-    }
-  
-  
   switch (optionTest)
   {
     case 'A':
