@@ -65,18 +65,18 @@ void loop()
     }
   
   
-  // switch (optionTest)
-  // {
-  //   case 'A':
-  //     if (digitalRead(WIO_5S_PRESS) == LOW)
-  //       setBrightness();
-  //     break;
-  //   case 'B':
-  //     // covidDataMA();
-  //     break;
-  //   case 'C':
-  //   // spr.drawString("SSSSSSSSSSSS", 30, 100);
-  //   //   homeScreen();
-  //     break;
-  // }
+  switch (optionTest)
+  {
+    case 'A':
+      if (digitalRead(WIO_5S_PRESS) == LOW)
+        setBrightness();
+      break;
+    case 'B':
+      // covidDataMA();
+      break;
+    case 'C':
+    // spr.drawString("SSSSSSSSSSSS", 30, 100);
+    //   homeScreen();
+      break;
+  }
 }
