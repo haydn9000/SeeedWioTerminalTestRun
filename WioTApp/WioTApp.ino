@@ -25,7 +25,7 @@ void setup()
 
   tft.begin();  // Start TFT LCD.
   tft.setRotation(3);  // Set screen rotation.
-  spr.createSprite(TFT_HEIGHT, TFT_WIDTH);  // Create buffer.
+  // spr.createSprite(TFT_HEIGHT, TFT_WIDTH);  // Create buffer.
 
   backLight.initialize();
   backLight.setBrightness(defaultBrightness);
@@ -47,35 +47,36 @@ void setup()
 //========================================================================= LOOP
 void loop()
 { 
-  // setBrightness();
-    // if (digitalRead(WIO_KEY_A) == LOW)
-    // {
-    //   drawImage<uint16_t>("tv_icon.bmp", 0, 0);  // Display image on LCD.
-    //   optionTest = 'A';
-    // }
-    // else if (digitalRead(WIO_KEY_B) == LOW)
-    // {
-    //   drawImage<uint16_t>("secon_icon.bmp", 0, 0);  // Display image on LCD.
-    //   optionTest = 'B';
-    // }
-    // else if (digitalRead(WIO_KEY_C) == LOW)
-    // {
-    //   drawImage<uint16_t>("settings_icon.bmp", 0, 0);  // Display image on LCD.
-    //   optionTest = 'C';
-    // }
+    if (digitalRead(WIO_KEY_C) == LOW)
+    {
+      drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
+      optionTest = 'A';
+    }
+
+    else if (digitalRead(WIO_5S_RIGHT) == LOW)
+    {
+      drawImage<uint16_t>("second_icon.bmp", 0, 0);  // Display image on LCD.
+      optionTest = 'B';
+    }
+    else if (digitalRead(WIO_5S_LEFT) == LOW)
+    {
+      drawImage<uint16_t>("setting_icon.bmp", 0, 0);  // Display image on LCD.
+      optionTest = 'A';
+    }
   
   
   // switch (optionTest)
   // {
   //   case 'A':
-  //     setBrightness();
+  //     if (digitalRead(WIO_5S_PRESS) == LOW)
+  //       setBrightness();
   //     break;
   //   case 'B':
-  //     covidDataMA();
+  //     // covidDataMA();
   //     break;
   //   case 'C':
-  //   spr.drawString("SSSSSSSSSSSS", 30, 100);
-  //     homeScreen();
+  //   // spr.drawString("SSSSSSSSSSSS", 30, 100);
+  //   //   homeScreen();
   //     break;
   // }
 }
