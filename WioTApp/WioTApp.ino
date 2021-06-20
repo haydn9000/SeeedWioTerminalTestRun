@@ -48,22 +48,37 @@ void setup()
 
 void navigation()
 {
+  drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
+
   if (digitalRead(WIO_KEY_C) == LOW)
   {
     drawImage<uint16_t>("background.bmp", 0, 0); // Display image on LCD.
+    optionTest = 'C';
   }
 
   else if (digitalRead(WIO_KEY_B) == LOW)
   {
     drawImage<uint16_t>("second_icon.bmp", 0, 0); // Display image on LCD.
+    optionTest = 'B';
   }
   else if (digitalRead(WIO_KEY_A) == LOW)
   {
     drawImage<uint16_t>("setting_icon.bmp", 0, 0); // Display image on LCD.
-    if (digitalRead(WIO_5S_PRESS) == LOW)
-    {
-      setBrightness();
-    }
+    optionTest = 'A';
+  }
+
+  switch (optionTest)
+  {
+    case 'A':
+      if (digitalRead(WIO_5S_PRESS) == LOW)
+        spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer.
+        setBrightness();
+      break;
+    case 'B':
+      break;
+    case 'C':
+      navigation();
+      break;
   }
 }
 
@@ -72,17 +87,4 @@ void navigation()
 void loop()
 { 
   navigation();
-  // switch (optionTest)
-  // {
-  //   case 'A':
-  //     if (digitalRead(WIO_5S_PRESS) == LOW)
-  //       spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer.
-  //       setBrightness();
-  //     break;
-  //   case 'B':
-  //     break;
-  //   case 'C':
-  //     navigation();
-  //     break;
-  // }
 }

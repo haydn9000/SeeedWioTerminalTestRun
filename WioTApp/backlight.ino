@@ -10,7 +10,6 @@ void setBrightness()
   if (digitalRead(WIO_KEY_C) == LOW)
   {
     drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
-    // spr.deleteSprite(TFT_HEIGHT, TFT_WIDTH);  // Create buffer.
     optionTest = 'C';
     navigation();
   }
