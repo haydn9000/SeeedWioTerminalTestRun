@@ -80,7 +80,7 @@ void loop()
     case 'B':
       break;
     case 'C':
-      navigation()
+      navigation();
       break;
   }
 }
