@@ -51,7 +51,7 @@ void navigation()
   if (digitalRead(WIO_KEY_C) == LOW)
   {
     drawImage<uint16_t>("background.bmp", 0, 0); // Display image on LCD.
-    optionTest = 'A';
+    optionTest = 'C';
   }
 
   else if (digitalRead(WIO_KEY_B) == LOW)
@@ -74,15 +74,13 @@ void loop()
   {
     case 'A':
       if (digitalRead(WIO_5S_PRESS) == LOW)
-        spr.createSprite(TFT_HEIGHT, TFT_WIDTH);  // Create buffer.
+        spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer.
         setBrightness();
       break;
     case 'B':
-      // covidDataMA();
       break;
     case 'C':
-    // spr.drawString("SSSSSSSSSSSS", 30, 100);
-    //   homeScreen();
+      navigation()
       break;
   }
 }
