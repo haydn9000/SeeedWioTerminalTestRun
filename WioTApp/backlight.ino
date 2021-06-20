@@ -11,7 +11,6 @@ void setBrightness()
   {
     drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
     optionTest = 'C';
-    navigation();
   }
   else if (digitalRead(WIO_5S_RIGHT) == LOW && brightness < 100) // When A is pressed backlight gets brighter
   {
