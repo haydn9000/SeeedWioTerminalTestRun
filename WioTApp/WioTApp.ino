@@ -42,7 +42,7 @@ void setup()
   pinMode(WIO_5S_RIGHT, INPUT_PULLUP);
   pinMode(WIO_5S_PRESS, INPUT_PULLUP);
 
-  drawImage<uint16_t>("setting_icon.bmp", 0, 0);  // Display image on LCD.
+  drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
 }
 
 
