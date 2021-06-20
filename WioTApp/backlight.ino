@@ -7,12 +7,7 @@ void setBrightness()
   spr.setTextSize(2);
   spr.setTextColor(TFT_WHITE);
 
-  if (digitalRead(WIO_KEY_C) == LOW)
-  {
-    drawImage<uint16_t>("background.bmp", 0, 0);  // Display image on LCD.
-    optionTest = 'C';
-  }
-  else if (digitalRead(WIO_5S_RIGHT) == LOW && brightness < 100) // When A is pressed backlight gets brighter
+  if (digitalRead(WIO_5S_RIGHT) == LOW && brightness < 100) // When A is pressed backlight gets brighter
   {
     brightness += 5;
     backLight.setBrightness(brightness);
