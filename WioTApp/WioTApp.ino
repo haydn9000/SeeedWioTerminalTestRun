@@ -66,17 +66,4 @@ void loop()
     optionTest = 'A';
   }
 
-  switch (optionTest)
-  {
-    case 'A':
-      if (digitalRead(WIO_5S_PRESS) == LOW)
-        spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Create buffer.
-        setBrightness();
-      break;
-    case 'B':
-      break;
-    case 'C':
-      navigation();
-      break;
-  }
 }
