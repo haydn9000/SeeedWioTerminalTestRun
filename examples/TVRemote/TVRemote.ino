@@ -27,7 +27,7 @@ void loop()
         Serial port. You could modify this sketch to send when you
         Push a button connected to an digital input pin.
         */
-        mySender.send(rawData, RAW_DATA_LEN, 36); // Pass the buffer, length, optionally frequency
+        mySender.send(rawData, RAW_DATA_LEN, 38); // Pass the buffer, length, optionally frequency
         Serial.println(F("Sent signal."));
     }
 }
