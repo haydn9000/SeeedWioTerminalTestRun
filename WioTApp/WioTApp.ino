@@ -14,6 +14,23 @@ int defaultBrightness = 25;
 char optionTest = 'C';
 
 
+typedef void (*FunctionPointer) ();
+
+const FunctionPointer PROGMEM  mainGameLoop[] = {
+  stateMenuIntro,
+  stateMenuMain,
+  stateMenuHelp,
+  stateMenuPlay,
+  stateMenuInfo,
+  stateMenuSoundfx,
+  stateGameNextStage,
+  stateGamePlaying,
+  stateGamePause,
+  stateGameOver,
+  stateGameEnded,
+};
+
+
 //========================================================================= SETUP
 void setup()
 {
