@@ -16,7 +16,9 @@ char optionTest = 'C';
 
 typedef void (*FunctionPointer) ();
 
-const FunctionPointer PROGMEM  mainGameLoop[] = {
+// About PROGREM: https://www.arduino.cc/reference/en/language/variables/utilities/progmem/
+const FunctionPointer mainGameLoop[] PROGMEM = 
+{
   stateMenuIntro,
   stateMenuMain,
   stateMenuHelp,
