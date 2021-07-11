@@ -13,7 +13,7 @@ void setup()
 {
     Serial.begin(9600);
     delay(2000);
-    while (!Serial); // Delay for Leonardo.
+    while (!Serial);  // Wait for serial port to connect. Needed for native USB
     Serial.println(F("Every time you press a key is a serial monitor we will send."));
 }
 
