@@ -66,7 +66,16 @@ void navigation()
     switch (menuIndex)
     {
       case 0: homeScreen(); break;
-      case 1: claudeUsageScreen(); break;
+      case 1: {
+        // Loop: picker → usage screen → back to picker. KEY_C on the picker exits to menu.
+        while (true) {
+          int mode = claudeUsagePicker();
+          if (mode < 0) break;  // user pressed C on the picker → back to menu
+          claudeUsageScreen(mode);
+          // returning from usage screen loops back to the picker
+        }
+        break;
+      }
       case 2: setBrightness(); break;
     }
     delay(200);  // Short pause after returning so the press isn't re-detected.
@@ -81,15 +90,18 @@ void navigation()
 // Placeholder home screen drawn using the sprite buffer for flicker-free updates.
 void homeScreen()
 {
-  spr.fillSprite(tft.color565(255, 0, 0));
-  spr.setTextSize(2);
-  spr.setTextColor(TFT_WHITE);
-  spr.drawString("Home", 30, 100);
-  spr.drawString("WIP", 30, 120);
-  spr.setTextSize(1);
-  spr.setTextColor(tft.color565(148, 112, 98));
-  spr.drawString("C: back", 20, 224);
-  spr.pushSprite(0, 0);
+  // Wait for the joystick press that launched us to be fully released.
+  while (digitalRead(WIO_5S_PRESS) == LOW) { delay(10); }
+
+  // Draw directly to TFT — avoids any sprite-allocation issues.
+  tft.fillScreen(tft.color565(180, 30, 30));
+  tft.setTextSize(2);
+  tft.setTextColor(TFT_WHITE, tft.color565(180, 30, 30));
+  tft.drawString("Home", 30, 100);
+  tft.drawString("WIP", 30, 125);
+  tft.setTextSize(1);
+  tft.setTextColor(tft.color565(220, 160, 140), tft.color565(180, 30, 30));
+  tft.drawString("C: back", 20, 224);
 
   while (true)
   {

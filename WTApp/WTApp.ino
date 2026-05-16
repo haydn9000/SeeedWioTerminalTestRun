@@ -1,5 +1,7 @@
 #include <TFT_eSPI.h>          //  Include TFT LCD library.
 #include "lcd_backlight.hpp"   //  Include TFT LCD backlight library.
+#include <rpcBLEDevice.h>      //  Wio Terminal RTL8720DN BLE stack (Seeed_Arduino_rpcBLE).
+#include <BLEServer.h>
 
 using namespace std;
 
@@ -16,6 +18,7 @@ int menuIndex = 0;               // Currently highlighted menu item.
 const int MENU_COUNT = 3;        // Total number of menu items.
 const char* menuItems[] = { "Home", "Claude Usage", "Settings" };
 bool menuNeedsRedraw = true;     // Set true to force the menu to redraw on the next navigation() call.
+bool bleInitDone = false;        // BLE init is deferred to loop() so the display renders first.
 
 
 //========================================================================= SETUP
@@ -41,16 +44,31 @@ void setup()
   pinMode(WIO_5S_RIGHT, INPUT_PULLUP);
   pinMode(WIO_5S_PRESS, INPUT_PULLUP);
 
-  // Serial for receiving JSON usage data from the host PC sender script.
+  // Serial for receiving JSON usage data over USB.
   Serial.begin(115200);
+  Serial.println("[boot] setup complete");
+
+  // Draw the menu immediately so the screen is live before BLE init can hang.
+  drawMenu();
 }
 
 
 //========================================================================= LOOP
 void loop()
 { 
-  // Check for incoming JSON usage data from the host PC (non-blocking).
+  // Defer BLE init until after the first frame renders (drawMenu runs in setup).
+  // BLEDevice::init() talks to the RTL8720DN chip — requires BLE firmware.
+  if (!bleInitDone && millis() > 3000)
+  {
+    bleInitDone = true;
+    Serial.println("[ble] calling bleInit()...");
+    bleInit();
+    Serial.println("[ble] bleInit() done — ready (advertising starts when BLE mode selected)");
+  }
+
+  // Check for incoming JSON usage data — serial or BLE (both non-blocking).
   checkSerial();
+  checkBLE();
 
   // Top button C → navigate to menu screen.
   if (digitalRead(WIO_KEY_C) == LOW)

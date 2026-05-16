@@ -210,7 +210,7 @@ void drawUsageRow(const char* label, float pct, int resetMins, const char* reset
 
 // -------------------------------------------------------------------------
 // Renders the full Claude Usage screen.
-void drawClaudeUsage()
+void drawClaudeUsage(int mode)
 {
     tft.fillScreen(TFT_BLACK);
 
@@ -236,7 +236,13 @@ void drawClaudeUsage()
         tft.drawString("No data received", 36, 118);
         tft.setTextSize(1);
         tft.setTextColor(tft.color565(190, 152, 135), tft.color565(28, 14, 10));
-        tft.drawString("Connect a data source to populate.", 20, 148);
+        if (mode == 1) {
+            tft.drawString("Run ble_sender.py on your PC.", 20, 143);
+            tft.drawString("Device: WT-001", 20, 153);
+        } else {
+            tft.drawString("Run serial_sender.py <port>.", 20, 143);
+            tft.drawString("e.g. serial_sender.py COM7", 20, 153);
+        }
     }
     else
     {
@@ -287,31 +293,102 @@ void drawClaudeUsage()
 
 // -------------------------------------------------------------------------
 // Claude Usage sub-screen. Blocks until KEY_C is pressed.
-// Call drawClaudeUsage() externally and then re-enter here to refresh the display.
-void claudeUsageScreen()
+void claudeUsageScreen(int mode)
 {
-    drawClaudeUsage();
+    // Entry debounce — wait for joystick press from the picker to be released.
+    while (digitalRead(WIO_5S_PRESS) == LOW) { delay(10); }
+
+    // Reset stale data from a previous session so we don't show the wrong source's data.
+    usageData.valid = false;
+    dataVersion++;
+
+    // Enable BLE advertising only while we're in BLE mode.
+    if (mode == 1) bleSetActive(true);
+
+    drawClaudeUsage(mode);
 
     uint16_t drawnVersion = dataVersion;
 
     while (true)
     {
-        // Keep receiving serial data even while the screen is open.
         checkSerial();
+        checkBLE();
 
-        // Redraw whenever any new packet arrives (version advances on every parse).
         if (dataVersion != drawnVersion)
         {
             drawnVersion = dataVersion;
-            drawClaudeUsage();
+            drawClaudeUsage(mode);
         }
 
         if (digitalRead(WIO_KEY_C) == LOW)
         {
-            // Wait for release so loop() doesn't catch the same press.
             while (digitalRead(WIO_KEY_C) == LOW) { delay(10); }
             delay(50);
+            if (mode == 1) bleSetActive(false);
             return;
         }
+    }
+}
+
+// -------------------------------------------------------------------------
+// Data source picker shown before the usage screen.
+// Returns 0 = Serial, 1 = Bluetooth, -1 = back (KEY_C pressed).
+int claudeUsagePicker()
+{
+    // Wait for the joystick press that launched us to be released.
+    while (digitalRead(WIO_5S_PRESS) == LOW) { delay(10); }
+
+    const char* items[] = { "USB Serial", "Bluetooth" };
+    int sel = 0;
+
+    auto drawPicker = [&]() {
+        tft.fillScreen(TFT_BLACK);
+        tft.setTextSize(2);
+        tft.setTextColor(tft.color565(217, 119, 87), TFT_BLACK);
+        tft.drawString("CLAUDE USAGE", 72, 8);
+        tft.setTextSize(1);
+        tft.setTextColor(tft.color565(190, 152, 135), TFT_BLACK);
+        tft.drawString("Select data source:", 20, 38);
+
+        for (int i = 0; i < 2; i++) {
+            int y = 65 + i * 65;
+            if (i == sel) {
+                tft.fillRoundRect(20, y, 280, 48, 6, TFT_WHITE);
+                tft.setTextSize(2);
+                tft.setTextColor(TFT_BLACK, TFT_WHITE);
+            } else {
+                tft.fillRoundRect(20, y, 280, 48, 6, TFT_BLACK);
+                tft.drawRoundRect(20, y, 280, 48, 6, tft.color565(135, 105, 92));
+                tft.setTextSize(2);
+                tft.setTextColor(TFT_WHITE, TFT_BLACK);
+            }
+            tft.drawString(items[i], 35, y + 14);
+        }
+
+        tft.setTextSize(1);
+        tft.setTextColor(tft.color565(148, 112, 98), TFT_BLACK);
+        tft.drawString("UP/DOWN: choose   PRESS: confirm   C: back", 8, 224);
+    };
+
+    drawPicker();
+
+    while (true)
+    {
+        if (digitalRead(WIO_5S_UP) == LOW) {
+            sel = (sel - 1 + 2) % 2;
+            drawPicker();
+            delay(200);
+        } else if (digitalRead(WIO_5S_DOWN) == LOW) {
+            sel = (sel + 1) % 2;
+            drawPicker();
+            delay(200);
+        } else if (digitalRead(WIO_5S_PRESS) == LOW) {
+            return sel;  // debounce handled in claudeUsageScreen entry
+        } else if (digitalRead(WIO_KEY_C) == LOW) {
+            while (digitalRead(WIO_KEY_C) == LOW) { delay(10); }
+            delay(50);
+            return -1;
+        }
+        delay(20);
     }
 }
