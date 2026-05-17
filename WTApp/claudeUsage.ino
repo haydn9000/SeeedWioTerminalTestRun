@@ -342,7 +342,7 @@ int claudeUsagePicker()
     while (digitalRead(WIO_5S_PRESS) == LOW) { delay(10); }
 
     const char* items[] = { "USB Serial", "Bluetooth" };
-    int sel = 0;
+    static int sel = 0;  // Persists across calls so the last-used source is pre-selected.
 
     auto drawPicker = [&]() {
         tft.fillScreen(TFT_BLACK);
