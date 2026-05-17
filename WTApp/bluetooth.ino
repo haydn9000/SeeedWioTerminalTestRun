@@ -115,9 +115,16 @@ bool isBLEConnected()
     return g_bleConnected;
 }
 
+// bleInitDone is defined in WTApp.ino — guards against calling BLE stack before init.
+extern bool bleInitDone;
+
 // Call with true when entering BLE usage mode, false when leaving.
 void bleSetActive(bool active)
 {
+    if (active && !bleInitDone) {
+        Serial.println("[ble] bleSetActive(true) ignored — BLE not initialised yet");
+        return;
+    }
     g_bleActive = active;
     if (active) {
         Serial.println("[ble] advertising as WT-001");
