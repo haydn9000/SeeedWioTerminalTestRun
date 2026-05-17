@@ -18,7 +18,7 @@ void drawBrightness()
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   char buf[8];
   sprintf(buf, "%d%%", brightness);
-  int textW = tft.textWidth(buf);           // Measure rendered width for centering.
+  int textW = tft.textWidth(buf);
   tft.drawString(buf, (320 - textW) / 2, 55);
 
   // Progress bar — hollow track with a filled portion proportional to brightness.

@@ -34,8 +34,8 @@ bool parseUsageJson(const char* json)
     const char* p;
 
     // "s": session percentage (integer 0-100).
-    // strstr finds "s": specifically — "sr": and "st": don't match because their
-    // closing quote is followed by a different character, not a colon after just 's'.
+    // Searches for the exact sequence "s": — keys like "sr" and "st" have extra
+    // characters before their closing quote so they won't accidentally match.
     p = strstr(json, "\"s\":");
     if (!p) return false;
     usageData.session_pct = (float)atoi(p + 4);
@@ -164,8 +164,8 @@ void drawUsageRow(const char* label, float pct, int resetMins, const char* reset
     // Bar track (hollow) then filled portion.
     int barY = y + 13;
     int barW = 228;
-    int barH = 22;    // taller than before; status badge is now smaller so room is freed
-    tft.drawRoundRect(20, barY, barW, barH, 4, tft.color565(135, 105, 92));  // warm visible track outline
+    int barH = 22;    // tall enough to contain the percentage text (textSize 2 = 16px).
+    tft.drawRoundRect(20, barY, barW, barH, 4, tft.color565(135, 105, 92));
     if (pct > 0.0f)
         tft.fillRoundRect(20, barY, (int)(barW * pct / 100.0f), barH, 4, col);
 
@@ -176,9 +176,7 @@ void drawUsageRow(const char* label, float pct, int resetMins, const char* reset
     tft.setTextColor(col, TFT_BLACK);
     tft.drawString(pctBuf, 256, barY + 3);
 
-    // Human-readable reset countdown — textSize 1, brighter than the section label
-    // so it reads as more prominent. (No fractional font size exists in the GLCD font;
-    // hierarchy is achieved through colour rather than size.)
+    // Reset countdown — brighter colour than the section label so it reads as secondary info.
     char resetBuf[40];
     if (resetMins >= 1440) {
         int days  = resetMins / 1440;
@@ -198,10 +196,10 @@ void drawUsageRow(const char* label, float pct, int resetMins, const char* reset
         sprintf(resetBuf, "Resetting now");
     }
     tft.setTextSize(1);
-    tft.setTextColor(tft.color565(215, 175, 148), TFT_BLACK);  // brighter warm — stands out from label
+    tft.setTextColor(tft.color565(215, 175, 148), TFT_BLACK);
     tft.drawString(resetBuf, 20, barY + barH + 4);
 
-    // Absolute local-time line — same textSize 1, same dim colour as the section label.
+    // Absolute local-time line — same font, dimmer colour.
     if (resetStr && resetStr[0] != '\0') {
         tft.setTextColor(tft.color565(152, 118, 102), TFT_BLACK);
         tft.drawString(resetStr, 20, barY + barH + 14);
@@ -237,21 +235,21 @@ void drawClaudeUsage(int mode)
         tft.setTextSize(1);
         tft.setTextColor(tft.color565(190, 152, 135), tft.color565(28, 14, 10));
         if (mode == 1) {
-            tft.drawString("Run ble_sender.py on your PC.", 20, 143);
-            tft.drawString("Device: WT-001", 20, 153);
+            tft.drawString("Run ble_sender.py on your PC.", 20, 145);
+            tft.drawString("Device: WT-001", 20, 157);
         } else {
-            tft.drawString("Run serial_sender.py <port>.", 20, 143);
-            tft.drawString("e.g. serial_sender.py COM7", 20, 153);
+            tft.drawString("Run serial_sender.py <port>.", 20, 145);
+            tft.drawString("e.g. serial_sender.py COM7", 20, 157);
         }
     }
     else
     {
         // Session row — 5-hour rolling window.
-        // y=35: label 35, bar 48-70 (h=22), reset_rel 74 (textSize 2), reset_abs 92. Row ends ~100.
+        // y=35: label at 35, bar 48–70 (h=22), reset countdown at 74, absolute time at 84.
         drawUsageRow("SESSION  (5h window)", usageData.session_pct, usageData.session_reset_mins, usageData.session_reset_str, 35);
 
         // Weekly row — 7-day rolling window.
-        // y=112: gives ~12px gap after session row ends at 100.
+        // y=112: leaves ~16px gap after the session row ends at ~96.
         drawUsageRow("WEEKLY   (7d window)", usageData.weekly_pct, usageData.weekly_reset_mins, usageData.weekly_reset_str, 112);
 
         // Status row at y=187: flanking session% + weekly% stats beside the pill badge.
@@ -277,9 +275,12 @@ void drawClaudeUsage(int mode)
         tft.drawString(s7d, 300 - (int)strlen(s7d) * 12, badgeY);
 
         // Pill badge + Claude star to its left.
+        tft.setTextSize(1);
+        badgeW = 58;
+        badgeH = 16;
+        badgeX = (320 - badgeW) / 2;
         tft.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 5, badgeBg);
         tft.drawRoundRect(badgeX, badgeY, badgeW, badgeH, 5, badgeColor);
-        tft.setTextSize(1);
         tft.setTextColor(badgeColor, badgeBg);
         tft.drawString(statusText, badgeX + 8, badgeY + 4);
         drawClaudeStar(badgeX - 11, badgeY + 8, badgeColor);

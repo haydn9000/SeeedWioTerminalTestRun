@@ -87,13 +87,12 @@ void navigation()
 }
 
 //========================================================================= HOMESCREEN
-// Placeholder home screen drawn using the sprite buffer for flicker-free updates.
+// Placeholder home screen — displays a WIP message on a red background.
 void homeScreen()
 {
   // Wait for the joystick press that launched us to be fully released.
   while (digitalRead(WIO_5S_PRESS) == LOW) { delay(10); }
 
-  // Draw directly to TFT — avoids any sprite-allocation issues.
   tft.fillScreen(tft.color565(180, 30, 30));
   tft.setTextSize(2);
   tft.setTextColor(TFT_WHITE, tft.color565(180, 30, 30));
