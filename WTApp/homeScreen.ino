@@ -35,6 +35,8 @@ void drawMenu()
   tft.setTextSize(1);
   tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
   tft.drawString("UP/DOWN: navigate   PRESS: select", 20, 224);
+
+  drawBatteryStatus(TFT_BLACK);
 }
 
 // Called every loop iteration while optionTest == 'C'.
@@ -101,6 +103,8 @@ void homeScreen()
   tft.setTextSize(1);
   tft.setTextColor(tft.color565(220, 160, 140), tft.color565(180, 30, 30));
   tft.drawString("C: back", 20, 224);
+
+  drawBatteryStatus(tft.color565(180, 30, 30));
 
   while (true)
   {

@@ -46,6 +46,15 @@ void setup()
 
   // Serial for receiving JSON usage data over USB.
   Serial.begin(115200);
+
+  // Probe for the BQ27441 fuel gauge on the 650mAh chassis I2C bus.
+  // Logs whether battery status will be available.
+  if (batteryBegin()) {
+    Serial.println("[battery] BQ27441 found — battery status enabled");
+  } else {
+    Serial.println("[battery] BQ27441 not found — battery overlay disabled");
+  }
+
   Serial.println("[boot] setup complete");
 
   // Draw the menu immediately so the screen is live before BLE init can hang.

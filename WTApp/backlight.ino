@@ -1,6 +1,7 @@
 
 //========================================================================= BACKLIGHT
-static int brightness = 25;  // Current brightness level (0–100), persists across calls.
+static int brightness = 25;  // Current brightness level (5–100), persists across calls.
+static const int MIN_BRIGHTNESS = 5;  // Below this the screen goes black.
 
 // Renders the full brightness adjustment screen.
 // Called once on entry and again after every brightness change.
@@ -29,11 +30,13 @@ void drawBrightness()
   // Min/max labels beneath the bar.
   tft.setTextSize(1);
   tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-  tft.drawString("0%", 20, 166);
+  tft.drawString("5%", 20, 166);
   tft.drawString("100%", 278, 166);
 
   // Hint
   tft.drawString("LEFT / RIGHT: adjust      PRESS or C: back", 20, 224);
+
+  drawBatteryStatus(TFT_BLACK);
 }
 
 // Brightness adjustment sub-screen. Blocks until the user exits.
@@ -56,9 +59,10 @@ void setBrightness()
       drawBrightness();
       delay(150);  // Repeat rate — how fast brightness changes while held.
     }
-    else if (digitalRead(WIO_5S_LEFT) == LOW && brightness > 0)
+    else if (digitalRead(WIO_5S_LEFT) == LOW && brightness > MIN_BRIGHTNESS)
     {
       brightness -= 5;
+      if (brightness < MIN_BRIGHTNESS) brightness = MIN_BRIGHTNESS;
       backLight.setBrightness(brightness);
       drawBrightness();
       delay(150);

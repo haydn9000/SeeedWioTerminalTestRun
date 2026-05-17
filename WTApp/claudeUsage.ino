@@ -290,6 +290,8 @@ void drawClaudeUsage(int mode)
     tft.setTextSize(1);
     tft.setTextColor(tft.color565(148, 112, 98), TFT_BLACK);
     tft.drawString("C: back", 20, 224);
+
+    drawBatteryStatus(TFT_BLACK);
 }
 
 // -------------------------------------------------------------------------
