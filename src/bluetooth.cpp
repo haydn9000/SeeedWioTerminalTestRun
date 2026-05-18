@@ -1,15 +1,13 @@
-// bluetooth.ino — BLE GATT peripheral for WT-001 data reception.
-//
-// Pattern follows the official Seeed Wio Terminal TFT + BLE documentation example:
-// https://wiki.seeedstudio.com/Wio-terminal-BLE-introduction/
+// bluetooth.cpp — BLE GATT peripheral for WT-001 data reception.
 //
 // Device name:       WT-001
 // Service UUID:      4e495554-494f-5500-0000-000000000001
 // RX Characteristic: 4e495554-494f-5500-0000-000000000002  (host writes JSON here)
-//
-// Includes live in WTApp.ino (compiled first):
-//   #include <rpcBLEDevice.h>
-//   #include <BLEServer.h>
+
+#include <Arduino.h>
+#include "globals.h"   // TFT_eSPI must be included before BLE headers
+#include <rpcBLEDevice.h>
+#include <BLEServer.h>
 
 #define WIOT_SERVICE_UUID  "4e495554-494f-5500-0000-000000000001"
 #define WIOT_RX_CHAR_UUID  "4e495554-494f-5500-0000-000000000002"
@@ -53,7 +51,7 @@ class ServerCallbacks : public BLEServerCallbacks
 };
 
 // -------------------------------------------------------------------------
-// Call once from setup() after tft.begin() and Serial.begin().
+// Call once from loop() after tft.begin() and Serial.begin().
 void bleInit()
 {
     BLEDevice::init(BLE_DEVICE_NAME);
@@ -67,7 +65,7 @@ void bleInit()
         WIOT_RX_CHAR_UUID,
         BLECharacteristic::PROPERTY_READ  |
         BLECharacteristic::PROPERTY_WRITE |
-        BLECharacteristic::PROPERTY_WRITE_NR  // accept write-without-response too
+        BLECharacteristic::PROPERTY_WRITE_NR
     );
     g_rxChar->setAccessPermissions(GATT_PERM_READ | GATT_PERM_WRITE);
     g_rxChar->createDescriptor(
@@ -90,11 +88,9 @@ void bleInit()
 }
 
 // -------------------------------------------------------------------------
-// Call every loop() iteration — processes pending writes and handles
-// reconnection using the delay(500) + startAdvertising() pattern from docs.
+// Call every loop() iteration — processes pending writes and handles reconnection.
 void checkBLE()
 {
-    // Process any pending write on the main thread.
     if (g_blePending)
     {
         g_blePending = false;
@@ -115,14 +111,11 @@ bool isBLEConnected()
     return g_bleConnected;
 }
 
-// bleInitDone is defined in WTApp.ino — guards against calling BLE stack before init.
-extern bool bleInitDone;
-
 // Call with true when entering BLE usage mode, false when leaving.
 void bleSetActive(bool active)
 {
-    if (active && !bleInitDone) {
-        Serial.println("[ble] bleSetActive(true) ignored — BLE not initialised yet");
+    if (!bleInitDone) {
+        Serial.println("[ble] not initialised yet — ignoring");
         return;
     }
     g_bleActive = active;
@@ -130,9 +123,11 @@ void bleSetActive(bool active)
         Serial.println("[ble] advertising as WT-001");
         BLEDevice::startAdvertising();
     } else {
-        if (!g_bleConnected) {
-            Serial.println("[ble] advertising stopped");
+        if (g_bleConnected) {
+            Serial.println("[ble] screen closed — connection persists");
+        } else {
             BLEDevice::stopAdvertising();
+            Serial.println("[ble] advertising stopped");
         }
     }
 }

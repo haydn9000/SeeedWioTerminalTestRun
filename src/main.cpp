@@ -1,35 +1,29 @@
-#include <TFT_eSPI.h>          //  Include TFT LCD library.
-#include "lcd_backlight.hpp"   //  Include TFT LCD backlight library.
-#include <rpcBLEDevice.h>      //  Wio Terminal RTL8720DN BLE stack (Seeed_Arduino_rpcBLE).
-#include <BLEServer.h>
+#include <Arduino.h>
+#include "globals.h"
 
-using namespace std;
+TFT_eSPI tft;
+TFT_eSprite spr(&tft);
+LCDBackLight backLight;
 
-TFT_eSPI tft;                    // TFT display driver instance.
-TFT_eSprite spr = TFT_eSprite(&tft); // Sprite buffer (used for flicker-free drawing on sub-screens).
+int maxBrightness;
+static int defaultBrightness = 25;
+char optionTest = 'C';
 
-static LCDBackLight backLight;
-int maxBrightness = backLight.getMaxBrightness(); // Max brightness value (100).
-int defaultBrightness = 25;      // Brightness on startup (0–100).
-char optionTest = 'C';           // Tracks the active top-level screen: 'A'=settings, 'B'=unused, 'C'=menu.
-
-// Menu state shared across WioTApp.ino and homeScreen.ino.
-int menuIndex = 0;               // Currently highlighted menu item.
-const int MENU_COUNT = 3;        // Total number of menu items.
+int menuIndex = 0;
 const char* menuItems[] = { "Home", "Claude Usage", "Settings" };
-bool menuNeedsRedraw = true;     // Set true to force the menu to redraw on the next navigation() call.
-bool bleInitDone = false;        // BLE init is deferred to loop() so the display renders first.
+bool menuNeedsRedraw = true;
+bool bleInitDone = false;
 
 
 //========================================================================= SETUP
 void setup()
 {
+  tft.begin();
+  tft.setRotation(3);
+  spr.createSprite(TFT_HEIGHT, TFT_WIDTH);
 
-  tft.begin();  // Start TFT LCD.
-  tft.setRotation(3);  // Set screen rotation (3 = landscape).
-  spr.createSprite(TFT_HEIGHT, TFT_WIDTH);  // Allocate sprite buffer once at startup.
-
-  backLight.initialize();                  // Configure SAMD51 timer/PWM for backlight control.
+  backLight.initialize();
+  maxBrightness = backLight.getMaxBrightness();
   backLight.setBrightness(defaultBrightness);
 
   // Top 3 button inputs — far right = A, middle = B, left = C.
@@ -44,11 +38,8 @@ void setup()
   pinMode(WIO_5S_RIGHT, INPUT_PULLUP);
   pinMode(WIO_5S_PRESS, INPUT_PULLUP);
 
-  // Serial for receiving JSON usage data over USB.
   Serial.begin(115200);
 
-  // Probe for the BQ27441 fuel gauge on the 650mAh chassis I2C bus.
-  // Logs whether battery status will be available.
   if (batteryBegin()) {
     Serial.println("[battery] BQ27441 found — battery status enabled");
   } else {
@@ -59,20 +50,21 @@ void setup()
 
   // Draw the menu immediately so the screen is live before BLE init can hang.
   drawMenu();
+  menuNeedsRedraw = false;
 }
 
 
 //========================================================================= LOOP
 void loop()
-{ 
+{
   // Defer BLE init until after the first frame renders (drawMenu runs in setup).
   // BLEDevice::init() talks to the RTL8720DN chip — requires BLE firmware.
   if (!bleInitDone && millis() > 3000)
   {
     bleInitDone = true;
-    Serial.println("[ble] calling bleInit()...");
+    Serial.println("[ble] initialising...");
     bleInit();
-    Serial.println("[ble] bleInit() done — ready (advertising starts when BLE mode selected)");
+    Serial.println("[ble] ready");
   }
 
   // Check for incoming JSON usage data — serial or BLE (both non-blocking).
@@ -82,7 +74,7 @@ void loop()
   // Top button C → navigate to menu screen.
   if (digitalRead(WIO_KEY_C) == LOW)
   {
-    menuNeedsRedraw = true;  // Ensure the menu redraws when switching back to it.
+    menuNeedsRedraw = true;
     optionTest = 'C';
   }
   // Top button B → placeholder for a future screen.
@@ -99,12 +91,14 @@ void loop()
   // Dispatch to the active screen handler each loop iteration.
   switch (optionTest)
   {
-    case 'A':          // Direct shortcut to brightness from top button A.
+    case 'A':
       setBrightness();
+      optionTest = 'C';
+      menuNeedsRedraw = true;
       break;
-    case 'B':          // Unused — reserved for a future screen.
+    case 'B':
       break;
-    case 'C':          // Main menu, joystick-navigated.
+    case 'C':
       navigation();
       break;
   }

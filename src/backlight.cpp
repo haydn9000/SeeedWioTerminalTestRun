@@ -1,10 +1,12 @@
+#include <Arduino.h>
+#include "globals.h"
+
 
 //========================================================================= BACKLIGHT
-static int brightness = 25;  // Current brightness level (5–100), persists across calls.
-static const int MIN_BRIGHTNESS = 5;  // Below this the screen goes black.
+static int brightness = 25;
+static const int MIN_BRIGHTNESS = 5;
 
 // Renders the full brightness adjustment screen.
-// Called once on entry and again after every brightness change.
 void drawBrightness()
 {
   tft.fillScreen(TFT_BLACK);
@@ -23,9 +25,9 @@ void drawBrightness()
   tft.drawString(buf, (320 - textW) / 2, 55);
 
   // Progress bar — hollow track with a filled portion proportional to brightness.
-  tft.drawRoundRect(20, 130, 280, 28, 4, TFT_DARKGREY);  // Track outline.
+  tft.drawRoundRect(20, 130, 280, 28, 4, TFT_DARKGREY);
   if (brightness > 0)
-    tft.fillRoundRect(20, 130, 280 * brightness / 100, 28, 4, TFT_WHITE);  // Fill.
+    tft.fillRoundRect(20, 130, 280 * brightness / 100, 28, 4, TFT_WHITE);
 
   // Min/max labels beneath the bar.
   tft.setTextSize(1);
@@ -40,24 +42,22 @@ void drawBrightness()
 }
 
 // Brightness adjustment sub-screen. Blocks until the user exits.
-// Entered from the menu (PRESS) or directly via top button A.
 void setBrightness()
 {
   drawBrightness();
 
-  // Spin until the joystick press that launched this screen is fully released,
-  // otherwise the exit condition below would fire immediately.
+  // Spin until the joystick press that launched this screen is fully released.
   while (digitalRead(WIO_5S_PRESS) == LOW) { delay(10); }
-  delay(50);  // Extra debounce after release.
+  delay(50);
 
   while (true)
   {
     if (digitalRead(WIO_5S_RIGHT) == LOW && brightness < 100)
     {
       brightness += 5;
-      backLight.setBrightness(brightness);  // Apply immediately so the screen dims/brightens in real time.
+      backLight.setBrightness(brightness);
       drawBrightness();
-      delay(150);  // Repeat rate — how fast brightness changes while held.
+      delay(150);
     }
     else if (digitalRead(WIO_5S_LEFT) == LOW && brightness > MIN_BRIGHTNESS)
     {
@@ -69,8 +69,6 @@ void setBrightness()
     }
     else if (digitalRead(WIO_5S_PRESS) == LOW || digitalRead(WIO_KEY_C) == LOW)
     {
-      // Wait for the exit button to be fully released before returning.
-      // This prevents loop() from catching the same press and triggering a double redraw.
       while (digitalRead(WIO_5S_PRESS) == LOW || digitalRead(WIO_KEY_C) == LOW) { delay(10); }
       delay(50);
       return;
