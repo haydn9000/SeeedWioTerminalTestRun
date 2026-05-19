@@ -7,11 +7,11 @@ A personal toolkit for the [Seeed Wio Terminal](https://wiki.seeedstudio.com/Wio
 
 ## Screens
 
-| Screen | Description |
-|---|---|
-| **Claude Usage** | Displays session (5h) and weekly (7d) Claude API utilisation, fed over USB serial or BLE |
-| **Settings** | Joystick-adjustable backlight brightness (5–100%) |
-| **Home** | Placeholder — WIP |
+| Screen | Description | Preview |
+|---|---|---|
+| **Claude Usage** | Displays session (5h) and weekly (7d) Claude API utilisation, fed over USB serial or BLE | <img src="img/claude-usage-screen.jpg" width="480"> |
+| **Settings** | Joystick-adjustable backlight brightness (5–100%) | |
+| **Home** | Placeholder — WIP | |
 
 ## Hardware
 
