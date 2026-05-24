@@ -297,7 +297,7 @@ static void drawSysStats()
 
         tft.setTextSize(2);
         tft.setTextColor(nc, nbg);
-        tft.drawString("> NO_SIGNAL", 24, 68);
+        tft.drawString("> NO_DATA", 24, 68);
 
         tft.setTextSize(1);
         tft.setTextColor(ndim, nbg);

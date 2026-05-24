@@ -232,7 +232,7 @@ static void drawClaudeUsage()
 
         tft.setTextSize(1);
         tft.setTextColor(ndim, nbg);
-        tft.drawString("AWAITING SIGNAL...", 24, 122);
+        tft.drawString("AWAITING DATA STREAM...", 24, 122);
         tft.drawString("USB:  claude_sender.py <port>", 24, 136);
         tft.drawString("BLE:  claude_sender.py --ble", 24, 148);
 
