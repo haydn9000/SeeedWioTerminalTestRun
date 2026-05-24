@@ -155,7 +155,7 @@ def collect() -> dict:
         "cpu": cpu_pct,
         "ct":  ct,
         "ram": round(ram.percent),
-        "rb":  f"{ram.used / 1_073_741_824:.1f}/{ram.total / 1_073_741_824:.0f}GB",
+        "rb":  f"{ram.used / 1_073_741_824:.1f}/{ram.total / 1_073_741_824:.1f}GB",
         "gpu": gpu_pct,
         "gt":  gt,
         "gm":  gm,
