@@ -9,9 +9,10 @@ A personal toolkit for the [Seeed Wio Terminal](https://wiki.seeedstudio.com/Wio
 
 | Screen | Description | Preview |
 |---|---|---|
+| **Home** | Live sensor dashboard — accelerometer (X/Y/Z bars), light level, and microphone amplitude | |
 | **Claude Usage** | Displays session (5h) and weekly (7d) Claude API utilisation, fed over USB serial or BLE | <img src="img/claude-usage-screen.jpg" width="480"> |
+| **Sys Stats** | Arc gauges for CPU, RAM, GPU, VRAM usage + temperatures and network bandwidth, fed over USB serial or BLE | |
 | **Settings** | Joystick-adjustable backlight brightness (5–100%) | |
-| **Home** | Placeholder — WIP | |
 
 ## Hardware
 
@@ -59,9 +60,41 @@ Every screen has access to:
 src/              One .cpp per screen + main.cpp
 include/          globals.h (shared state + prototypes), lcd_backlight.hpp
 tools/            Host-side utilities (Python)
-  serial_sender.py    Feed Claude usage data over USB serial
-  ble_sender.py       Feed Claude usage data over BLE
+  claude_sender.py    Feed Claude usage data — USB serial or --ble
+  sysstat_sender.py   Feed PC system stats — USB serial or --ble
   bitmap-converter/   PySide6 GUI — convert images to Wio Terminal bitmap format
+```
+
+## Host tools
+
+Both sender scripts support USB serial and BLE via a `--ble` flag.
+
+**`claude_sender.py`** — streams Claude API usage to the Claude Usage screen:
+
+```bash
+pip install httpx pyserial        # serial mode
+pip install httpx bleak           # BLE mode
+
+python tools/claude_sender.py COM3          # Windows serial
+python tools/claude_sender.py /dev/ttyACM0  # Linux/macOS serial
+python tools/claude_sender.py --ble         # BLE auto-discover
+python tools/claude_sender.py --ble AA:BB:CC:DD:EE:FF  # BLE to address
+```
+
+Reads your Claude OAuth token from `~/.claude/.credentials.json` automatically.
+
+**`sysstat_sender.py`** — streams PC system stats (CPU, RAM, GPU, network) to the Sys Stats screen:
+
+```bash
+pip install psutil pyserial              # serial mode
+pip install psutil bleak                 # BLE mode
+pip install nvidia-ml-py                 # optional: NVIDIA GPU stats
+pip install wmi                          # optional: Windows CPU temperature (needs LibreHardwareMonitor)
+
+python tools/sysstat_sender.py COM3                      # Windows serial
+python tools/sysstat_sender.py /dev/ttyACM0              # Linux/macOS serial
+python tools/sysstat_sender.py --ble                     # BLE auto-discover
+python tools/sysstat_sender.py --ble AA:BB:CC:DD:EE:FF  # BLE to address
 ```
 
 ## BLE

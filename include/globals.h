@@ -12,7 +12,7 @@ extern bool bleInitDone;
 
 // ---- Menu state (defined in main.cpp) ----
 extern int menuIndex;
-constexpr int MENU_COUNT = 3;
+constexpr int MENU_COUNT = 4;
 extern const char* menuItems[];
 extern bool menuNeedsRedraw;
 
@@ -34,11 +34,15 @@ void drawBatteryStatus(uint16_t bgColor);
 // ---- claudeUsage.cpp ----
 bool parseUsageJson(const char* json);
 void checkSerial();
-void claudeUsageScreen(int mode);
-int claudeUsagePicker();
+void claudeUsageScreen();
+
+// ---- sysStats.cpp ----
+bool parseSysStatsJson(const char* json);
+void sysStatsScreen();
 
 // ---- bluetooth.cpp ----
 void bleInit();
 void checkBLE();
 bool isBLEConnected();
 void bleSetActive(bool active);
+const char* getBLEAddress();

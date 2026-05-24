@@ -10,7 +10,7 @@ static int defaultBrightness = 25;
 char optionTest = 'C';
 
 int menuIndex = 0;
-const char* menuItems[] = { "Home", "Claude Usage", "Settings" };
+const char* menuItems[] = { "Home", "Claude Usage", "Sys Stats", "Settings" };
 bool menuNeedsRedraw = true;
 bool bleInitDone = false;
 

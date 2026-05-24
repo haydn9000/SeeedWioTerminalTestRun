@@ -93,7 +93,10 @@ void checkSerial()
             if (serialPos > 0)
             {
                 serialBuf[serialPos] = '\0';
-                parseUsageJson(serialBuf);
+                if (strstr(serialBuf, "\"cpu\":"))
+                    parseSysStatsJson(serialBuf);
+                else
+                    parseUsageJson(serialBuf);
                 serialPos = 0;
             }
         }
@@ -122,8 +125,8 @@ static void drawClaudeStar(int cx, int cy, uint16_t color)
 // Returns a colour for a given usage percentage using the Claude brand palette.
 static uint16_t usageColor(float pct)
 {
-    if (pct < 60.0f) return tft.color565(217, 119, 87);   // Claude coral
-    if (pct < 85.0f) return tft.color565(195, 135, 45);   // deep amber
+    if (pct < 60.0f) return tft.color565(60, 210, 100);   // neon green
+    if (pct < 85.0f) return tft.color565(210, 175, 0);    // amber
     return tft.color565(210, 65, 55);                      // warning red
 }
 
@@ -131,8 +134,8 @@ static uint16_t usageColor(float pct)
 // Draws one labelled usage row at vertical position y.
 static void drawUsageRow(const char* label, float pct, int resetMins, const char* resetStr, int y)
 {
-    if (pct < 0.0f)   pct = 0.0f;
-    if (pct > 100.0f) pct = 100.0f;
+    if (pct < 0.0f) pct = 0.0f;
+    float barPct = pct > 100.0f ? 100.0f : pct;  // cap bar fill, keep raw for label
 
     uint16_t col = usageColor(pct);
 
@@ -143,9 +146,9 @@ static void drawUsageRow(const char* label, float pct, int resetMins, const char
     int barY = y + 13;
     int barW = 228;
     int barH = 22;
-    tft.drawRoundRect(20, barY, barW, barH, 4, tft.color565(135, 105, 92));
-    if (pct > 0.0f)
-        tft.fillRoundRect(20, barY, (int)(barW * pct / 100.0f), barH, 4, col);
+    if (barPct > 0.0f)
+        tft.fillRect(20, barY, (int)(barW * barPct / 100.0f), barH, col);
+    tft.drawRect(20, barY, barW, barH, tft.color565(35, 40, 35));   // neutral dark border
 
     char pctBuf[8];
     sprintf(pctBuf, "%.0f%%", pct);
@@ -183,49 +186,77 @@ static void drawUsageRow(const char* label, float pct, int resetMins, const char
 
 // -------------------------------------------------------------------------
 // Renders the full Claude Usage screen.
-static void drawClaudeUsage(int mode)
+static void drawClaudeUsage()
 {
     tft.fillScreen(TFT_BLACK);
 
+    // --- Header strip (coral cyberpunk) ---
+    tft.fillRect(0, 0, 320, 30, tft.color565(16, 6, 3));
+    tft.fillRect(0, 0, 3, 30, tft.color565(217, 119, 87));          // coral accent bar
     tft.setTextSize(2);
-    tft.setTextColor(tft.color565(217, 119, 87), TFT_BLACK);
-    tft.drawString("CLAUDE USAGE", 72, 8);
+    tft.setTextColor(tft.color565(217, 119, 87), tft.color565(16, 6, 3));
+    tft.drawString("// CLAUDE_USAGE", 10, 7);
+    tft.setTextSize(1);
+    tft.setTextColor(tft.color565(110, 52, 30), tft.color565(16, 6, 3));
+    tft.drawString("AI USAGE", 258, 12);
+    tft.drawFastHLine(0, 29, 320, tft.color565(100, 45, 25));
+    for (int xi = 8; xi < 320; xi += 14)
+        tft.drawFastVLine(xi, 27, 4, tft.color565(155, 72, 40));
+
+    // Corner-bracket helper (coral palette) — used for no-data panel and badge.
+    auto cybBox = [](int x, int y, int w, int h, uint16_t col, int t) {
+        tft.drawFastHLine(x,       y,       t, col);
+        tft.drawFastVLine(x,       y,       t, col);
+        tft.drawFastHLine(x+w-t,   y,       t, col);
+        tft.drawFastVLine(x+w-1,   y,       t, col);
+        tft.drawFastHLine(x,       y+h-1,   t, col);
+        tft.drawFastVLine(x,       y+h-t,   t, col);
+        tft.drawFastHLine(x+w-t,   y+h-1,   t, col);
+        tft.drawFastVLine(x+w-1,   y+h-t,   t, col);
+    };
 
     if (!usageData.valid)
     {
-        tft.fillRoundRect(8, 75, 304, 110, 8, tft.color565(28, 14, 10));
-        tft.drawRoundRect(8, 75, 304, 110, 8, tft.color565(217, 119, 87));
-        tft.drawRoundRect(9, 76, 302, 108, 7, tft.color565(180, 90, 62));
-        tft.drawRoundRect(10, 77, 300, 106, 6, tft.color565(130, 58, 38));
+        uint16_t nc   = tft.color565(217, 119, 87);
+        uint16_t nbg  = tft.color565(14,   5,  2);
+        uint16_t ndim = tft.color565(160, 100, 72);
+        tft.fillRect(10, 48, 300, 160, nbg);
+        cybBox(10, 48, 300, 160, nc, 12);
+        tft.drawFastHLine(11, 49, 298, tft.color565(40, 15, 8));    // scan-line accent
 
-        drawClaudeStar(160, 103, tft.color565(217, 119, 87));
+        drawClaudeStar(160, 82, nc);
 
         tft.setTextSize(2);
-        tft.setTextColor(tft.color565(217, 119, 87), tft.color565(28, 14, 10));
-        tft.drawString("No data received", 36, 118);
+        tft.setTextColor(nc, nbg);
+        tft.drawString("> NO_DATA", 66, 96);
+
         tft.setTextSize(1);
-        tft.setTextColor(tft.color565(190, 152, 135), tft.color565(28, 14, 10));
-        if (mode == 1) {
-            tft.drawString("Run ble_sender.py on your PC.", 20, 145);
-            tft.drawString("Device: WT-001", 20, 157);
-        } else {
-            tft.drawString("Run serial_sender.py <port>.", 20, 145);
-            tft.drawString("e.g. serial_sender.py COM7", 20, 157);
-        }
+        tft.setTextColor(ndim, nbg);
+        tft.drawString("AWAITING SIGNAL...", 24, 122);
+        tft.drawString("USB:  claude_sender.py <port>", 24, 136);
+        tft.drawString("BLE:  claude_sender.py --ble", 24, 148);
+
+        tft.setTextColor(tft.color565(100, 52, 32), nbg);
+        tft.drawString(Serial ? "STATUS: USB ACTIVE" : "STATUS: WAITING...", 24, 163);
+        char addrLine[40];
+        snprintf(addrLine, sizeof(addrLine), "ADDR:  %s",
+                 bleInitDone ? getBLEAddress() : "INIT...");
+        tft.drawString(addrLine, 24, 175);
     }
     else
     {
-        drawUsageRow("SESSION  (5h window)", usageData.session_pct, usageData.session_reset_mins, usageData.session_reset_str, 35);
-        drawUsageRow("WEEKLY   (7d window)", usageData.weekly_pct, usageData.weekly_reset_mins, usageData.weekly_reset_str, 112);
+        drawUsageRow("SESSION  (5h window)", usageData.session_pct, usageData.session_reset_mins, usageData.session_reset_str, 38);
+        drawUsageRow("WEEKLY   (7d window)", usageData.weekly_pct, usageData.weekly_reset_mins, usageData.weekly_reset_str, 113);
 
-        bool limited = (strncmp(usageData.status, "limited", 7) == 0);
-        const char* statusText = limited ? "LIMITED" : "ALLOWED";
-        uint16_t badgeColor    = limited ? tft.color565(210, 65, 55)  : tft.color565(175, 140, 60);
-        uint16_t badgeBg       = limited ? tft.color565(55, 18, 15)   : tft.color565(40, 32, 8);
-        int badgeW = 58;
+        bool limited  = (strncmp(usageData.status, "limited",  7) == 0);
+        bool rejected = (strncmp(usageData.status, "rejected", 8) == 0);
+        const char* statusText = limited ? "LIMITED" : (rejected ? "REJECTED" : "ALLOWED");
+        uint16_t badgeColor    = (limited || rejected) ? tft.color565(210, 65, 55)  : tft.color565(175, 140, 60);
+        uint16_t badgeBg       = (limited || rejected) ? tft.color565(55, 18, 15)   : tft.color565(40, 32, 8);
+        int badgeW = rejected ? 70 : 58;
         int badgeH = 16;
         int badgeX = (320 - badgeW) / 2;
-        int badgeY = 187;
+        int badgeY = 188;
 
         char s5h[8]; sprintf(s5h, "%d%%", (int)usageData.session_pct);
         tft.setTextSize(2);
@@ -237,23 +268,27 @@ static void drawClaudeUsage(int mode)
         tft.drawString(s7d, 300 - (int)strlen(s7d) * 12, badgeY);
 
         tft.setTextSize(1);
-        tft.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 5, badgeBg);
-        tft.drawRoundRect(badgeX, badgeY, badgeW, badgeH, 5, badgeColor);
+        tft.fillRect(badgeX, badgeY, badgeW, badgeH, badgeBg);
+        cybBox(badgeX, badgeY, badgeW, badgeH, badgeColor, 6);
         tft.setTextColor(badgeColor, badgeBg);
         tft.drawString(statusText, badgeX + 8, badgeY + 4);
         drawClaudeStar(badgeX - 11, badgeY + 8, badgeColor);
+
     }
 
+    // Footer
+    tft.fillRect(0, 219, 3, 21, tft.color565(217, 119, 87));        // coral accent bar
     tft.setTextSize(1);
-    tft.setTextColor(tft.color565(148, 112, 98), TFT_BLACK);
-    tft.drawString("C: back", 20, 224);
+    tft.setTextColor(tft.color565(110, 60, 38), TFT_BLACK);
+    tft.drawString("[C] BACK", 8, 225);
 
     drawBatteryStatus(TFT_BLACK);
 }
 
 // -------------------------------------------------------------------------
-// Claude Usage sub-screen. Blocks until KEY_C is pressed.
-void claudeUsageScreen(int mode)
+// Claude Usage sub-screen. Accepts data from USB serial and BLE simultaneously.
+// Blocks until KEY_C is pressed.
+void claudeUsageScreen()
 {
     while (digitalRead(WIO_5S_PRESS) == LOW) { delay(10); }
 
@@ -262,13 +297,13 @@ void claudeUsageScreen(int mode)
     dataVersion++;
 
     bool bleActivated = false;
-    if (mode == 1 && bleInitDone)
+    if (bleInitDone)
     {
         bleSetActive(true);
         bleActivated = true;
     }
 
-    drawClaudeUsage(mode);
+    drawClaudeUsage();
 
     uint16_t drawnVersion = dataVersion;
 
@@ -278,7 +313,7 @@ void claudeUsageScreen(int mode)
         checkBLE();
 
         // BLE init completes ~3s after boot — activate advertising once ready.
-        if (mode == 1 && !bleActivated && bleInitDone)
+        if (!bleActivated && bleInitDone)
         {
             bleSetActive(true);
             bleActivated = true;
@@ -287,78 +322,17 @@ void claudeUsageScreen(int mode)
         if (dataVersion != drawnVersion)
         {
             drawnVersion = dataVersion;
-            drawClaudeUsage(mode);
+            drawClaudeUsage();
         }
 
         if (digitalRead(WIO_KEY_C) == LOW)
         {
             while (digitalRead(WIO_KEY_C) == LOW) { delay(10); }
             delay(50);
-            if (mode == 1) bleSetActive(false);
+            bleSetActive(false);
             return;
         }
     }
 }
 
-// -------------------------------------------------------------------------
-// Data source picker shown before the usage screen.
-// Returns 0 = Serial, 1 = Bluetooth, -1 = back (KEY_C pressed).
-int claudeUsagePicker()
-{
-    while (digitalRead(WIO_5S_PRESS) == LOW) { delay(10); }
 
-    const char* items[] = { "USB Serial", "Bluetooth" };
-    static int sel = 0;
-
-    auto drawPicker = [&]() {
-        tft.fillScreen(TFT_BLACK);
-        tft.setTextSize(2);
-        tft.setTextColor(tft.color565(217, 119, 87), TFT_BLACK);
-        tft.drawString("CLAUDE USAGE", 72, 8);
-        tft.setTextSize(1);
-        tft.setTextColor(tft.color565(190, 152, 135), TFT_BLACK);
-        tft.drawString("Select data source:", 20, 38);
-
-        for (int i = 0; i < 2; i++) {
-            int y = 65 + i * 65;
-            if (i == sel) {
-                tft.fillRoundRect(20, y, 280, 48, 6, TFT_WHITE);
-                tft.setTextSize(2);
-                tft.setTextColor(TFT_BLACK, TFT_WHITE);
-            } else {
-                tft.fillRoundRect(20, y, 280, 48, 6, TFT_BLACK);
-                tft.drawRoundRect(20, y, 280, 48, 6, tft.color565(135, 105, 92));
-                tft.setTextSize(2);
-                tft.setTextColor(TFT_WHITE, TFT_BLACK);
-            }
-            tft.drawString(items[i], 35, y + 14);
-        }
-
-        tft.setTextSize(1);
-        tft.setTextColor(tft.color565(148, 112, 98), TFT_BLACK);
-        tft.drawString("UP/DOWN: choose   PRESS: confirm   C: back", 8, 224);
-    };
-
-    drawPicker();
-
-    while (true)
-    {
-        if (digitalRead(WIO_5S_UP) == LOW) {
-            sel = (sel - 1 + 2) % 2;
-            drawPicker();
-            delay(200);
-        } else if (digitalRead(WIO_5S_DOWN) == LOW) {
-            sel = (sel + 1) % 2;
-            drawPicker();
-            delay(200);
-        } else if (digitalRead(WIO_5S_PRESS) == LOW) {
-            return sel;
-        } else if (digitalRead(WIO_KEY_C) == LOW) {
-            while (digitalRead(WIO_KEY_C) == LOW) { delay(10); }
-            delay(50);
-            sel = 0;
-            return -1;
-        }
-        delay(20);
-    }
-}

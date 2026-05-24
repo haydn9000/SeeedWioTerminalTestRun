@@ -94,7 +94,10 @@ void checkBLE()
     if (g_blePending)
     {
         g_blePending = false;
-        parseUsageJson(g_bleBuf);
+        if (strstr(g_bleBuf, "\"cpu\":"))
+            parseSysStatsJson(g_bleBuf);
+        else
+            parseUsageJson(g_bleBuf);
     }
 
     // Restart advertising after a disconnect — only if BLE mode is active.
@@ -109,6 +112,26 @@ void checkBLE()
 bool isBLEConnected()
 {
     return g_bleConnected;
+}
+
+// Returns the BLE MAC address as "AA:BB:CC:DD:EE:FF" (big-endian, matching scanner output).
+// rpcBLE toString() gives bytes LSB-first, so we reverse the 6 octets.
+// Returns "--:--:--:--:--:--" before bleInit() has run.
+const char* getBLEAddress()
+{
+    static char addrBuf[18] = "--:--:--:--:--:--";
+    if (bleInitDone) {
+        std::string s = BLEDevice::getAddress().toString();
+        if (s.length() == 17) {
+            uint8_t b[6];
+            for (int i = 0; i < 6; i++)
+                b[i] = (uint8_t)strtol(s.c_str() + i * 3, nullptr, 16);
+            snprintf(addrBuf, sizeof(addrBuf),
+                     "%02X:%02X:%02X:%02X:%02X:%02X",
+                     b[5], b[4], b[3], b[2], b[1], b[0]);
+        }
+    }
+    return addrBuf;
 }
 
 // Call with true when entering BLE usage mode, false when leaving.

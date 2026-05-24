@@ -2,7 +2,7 @@
 
 ## Project overview
 
-A personal toolkit for the Seeed Wio Terminal. Each screen is a `.cpp` file with a single blocking function; the joystick-navigated menu wires them together. Currently ships with a Claude Usage screen, a brightness settings screen, and a Home placeholder. New screens slot in without touching anything outside `homeScreen.cpp` and `globals.h`.
+A personal toolkit for the Seeed Wio Terminal. Each screen is a `.cpp` file with a single blocking function; the joystick-navigated menu wires them together. Currently ships with a Home sensor dashboard, a Claude Usage screen, a Sys Stats screen, and a brightness settings screen. New screens slot in without touching anything outside `homeScreen.cpp` and `globals.h`.
 
 Built with PlatformIO (`atmelsam` platform, `arduino` framework, `seeed_wio_terminal` board).
 
@@ -50,12 +50,13 @@ src/
   battery.cpp       — BQ27441-G1A I²C driver + drawBatteryStatus() overlay
   bluetooth.cpp     — BLE GATT peripheral (WT-001); deferred init, on-demand advertising
   claudeUsage.cpp   — Claude Usage screen: JSON parser, serial reader, usage display
+  sysStats.cpp      — Sys Stats screen: arc gauges for CPU/RAM/GPU/network via sysstat_sender.py
 include/
   globals.h         — extern declarations and function prototypes for all .cpp files
   lcd_backlight.hpp — SAMD51 TC0 PWM backlight driver (Seeed original, Boost licence)
 tools/
-  serial_sender.py  — Feeds Claude usage data over USB serial
-  ble_sender.py     — Feeds Claude usage data over BLE
+  claude_sender.py  — Feeds Claude usage data over USB serial (default) or BLE (--ble flag)
+  sysstat_sender.py — Feeds PC system stats (CPU/RAM/GPU/net) over USB serial or BLE (--ble flag)
   bitmap-converter/ — PySide6 GUI for converting images to Wio Terminal bitmap format
 ```
 

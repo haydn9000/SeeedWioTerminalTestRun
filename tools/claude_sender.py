@@ -1,27 +1,28 @@
 #!/usr/bin/env python3
 """
-ble_sender.py — Sends Claude API usage data to the Wio Terminal over BLE.
+claude_sender.py — Sends Claude API usage data to the Wio Terminal over USB serial or BLE.
 
-Scans for a device named "WT-001", connects, then polls the Anthropic API
-every POLL_INTERVAL seconds and writes a compact JSON line to the RX
-characteristic. The Wio Terminal feeds this into parseUsageJson() and
-updates the Claude Usage screen.
+Polls the Anthropic API every POLL_INTERVAL seconds and writes a compact JSON
+line to the Wio Terminal. The Wio Terminal reads this in checkSerial()/checkBLE()
+and updates the Claude Usage screen.
 
 Usage:
-    python ble_sender.py                      # auto-discover WT-001
-    python ble_sender.py <address>            # connect to specific BLE address
-      Windows:  python ble_sender.py "AA:BB:CC:DD:EE:FF"
-      macOS:    python ble_sender.py "12345678-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+    python claude_sender.py COM3           # USB serial — Windows
+    python claude_sender.py /dev/ttyACM0  # USB serial — Linux/macOS
+    python claude_sender.py --ble          # BLE (auto-discovers WT-001)
+    python claude_sender.py --ble AA:BB:CC:DD:EE:FF  # BLE to specific address
 
 Requirements:
-    pip install bleak httpx
+    pip install httpx pyserial
+
+Optional:
+    pip install bleak   # BLE transport (required for --ble mode only)
 
 Credentials:
-    Reads the same OAuth token as serial_sender.py:
+    Reads the same OAuth token as the Claude desktop app:
     ~/.claude/.credentials.json  (field: "accessToken")
 """
 
-import asyncio
 import json
 import re
 import sys
@@ -30,13 +31,22 @@ from datetime import datetime
 from pathlib import Path
 
 import httpx
-from bleak import BleakClient, BleakScanner
+
+# ---- optional: BLE via bleak (only needed for --ble mode) ----
+_bleak_available = False
+try:
+    import asyncio
+    from bleak import BleakClient, BleakScanner
+    _bleak_available = True
+except ImportError:
+    pass
 
 # ---- Configuration -------------------------------------------------------
-DEVICE_NAME   = "WT-001"
-SERVICE_UUID  = "4e495554-494f-5500-0000-000000000001"
-RX_CHAR_UUID  = "4e495554-494f-5500-0000-000000000002"
-POLL_INTERVAL = 60   # Seconds between API polls.
+POLL_INTERVAL = 60       # seconds between API polls
+BAUD_RATE     = 115200   # must match Serial.begin() on the Wio Terminal
+
+BLE_DEVICE_NAME = "WT-001"
+BLE_RX_CHAR_UUID = "4e495554-494f-5500-0000-000000000002"
 
 # ---- Anthropic API -------------------------------------------------------
 API_URL  = "https://api.anthropic.com/v1/messages"
@@ -143,25 +153,24 @@ def poll_api(token: str) -> dict | None:
     }
 
 
-async def find_device(address: str | None) -> str | None:
-    """Scan for WT-001 and return its address, or verify a given address."""
-    if address:
-        log(f"Using provided address: {address}")
-        return address
+# ---- BLE transport -------------------------------------------------------
 
-    log(f'Scanning for "{DEVICE_NAME}"...')
-    device = await BleakScanner.find_device_by_name(DEVICE_NAME, timeout=10.0)
+async def _ble_find(address: str | None) -> str | None:
+    if address:
+        log(f"Using address: {address}")
+        return address
+    log(f'Scanning for "{BLE_DEVICE_NAME}"...')
+    device = await BleakScanner.find_device_by_name(BLE_DEVICE_NAME, timeout=10.0)
     if device:
         log(f"Found {device.name} at {device.address}")
         return device.address
-    log(f'Device "{DEVICE_NAME}" not found in scan. Is the Wio Terminal on and advertising?')
+    log(f'"{BLE_DEVICE_NAME}" not found — is the Wio Terminal on the Claude Usage screen?')
     return None
 
 
-async def run(token: str, address: str | None) -> None:
-    """Main async loop: discover → connect → poll → write indefinitely."""
+async def _ble_run(token: str, address: str | None) -> None:
     while True:
-        addr = await find_device(address)
+        addr = await _ble_find(address)
         if not addr:
             log("Retrying scan in 10s...")
             await asyncio.sleep(10)
@@ -180,9 +189,7 @@ async def run(token: str, address: str | None) -> None:
                         if payload:
                             line = json.dumps(payload, separators=(",", ":")) + "\n"
                             data = line.encode()
-                            # BLE characteristic max write is typically 512 bytes;
-                            # our JSON is well under that limit.
-                            await client.write_gatt_char(RX_CHAR_UUID, data, response=True)
+                            await client.write_gatt_char(BLE_RX_CHAR_UUID, data, response=True)
                             log(f"Sent ({len(data)}B): {line.strip()}")
                         else:
                             log("Poll failed — will retry next interval.")
@@ -197,9 +204,39 @@ async def run(token: str, address: str | None) -> None:
         await asyncio.sleep(5)
 
 
-def main() -> None:
-    address = sys.argv[1] if len(sys.argv) > 1 else None
+# ---- Entry point ---------------------------------------------------------
 
+def main() -> None:
+    args = sys.argv[1:]
+
+    # --ble [address]  →  BLE mode
+    if args and args[0] == "--ble":
+        if not _bleak_available:
+            print("BLE mode requires bleak:  pip install bleak")
+            sys.exit(1)
+        address = args[1] if len(args) > 1 else None
+        token = load_token()
+        if not token:
+            log("Could not load API token — aborting.")
+            sys.exit(1)
+        log("Token loaded.")
+        try:
+            asyncio.run(_ble_run(token, address))
+        except KeyboardInterrupt:
+            log("Stopped.")
+        return
+
+    # <port>  →  USB serial mode
+    if not args:
+        print(f"Usage: python {sys.argv[0]} <port>")
+        print(f"       python {sys.argv[0]} --ble [address]")
+        print( "  e.g. python claude_sender.py COM3")
+        print( "  e.g. python claude_sender.py --ble")
+        sys.exit(1)
+
+    import serial
+
+    port = args[0]
     token = load_token()
     if not token:
         log("Could not load API token — aborting.")
@@ -207,9 +244,32 @@ def main() -> None:
     log("Token loaded.")
 
     try:
-        asyncio.run(run(token, address))
+        ser = serial.Serial(port, BAUD_RATE, timeout=1)
+        log(f"Opened {port} at {BAUD_RATE} baud.")
+    except serial.SerialException as e:
+        log(f"Could not open {port}: {e}")
+        sys.exit(1)
+
+    last_poll = 0.0
+    try:
+        while True:
+            now = time.time()
+            if now - last_poll >= POLL_INTERVAL:
+                log("Polling Anthropic API...")
+                payload = poll_api(token)
+                if payload:
+                    line = json.dumps(payload, separators=(",", ":")) + "\n"
+                    ser.write(line.encode())
+                    log(f"Sent: {line.strip()}")
+                    last_poll = now
+                else:
+                    log("Poll failed — will retry next interval.")
+                    last_poll = now
+            time.sleep(1)
     except KeyboardInterrupt:
         log("Stopped.")
+    finally:
+        ser.close()
 
 
 if __name__ == "__main__":
