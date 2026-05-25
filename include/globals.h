@@ -12,7 +12,7 @@ extern bool bleInitDone;
 
 // ---- Menu state (defined in main.cpp) ----
 extern int menuIndex;
-constexpr int MENU_COUNT = 4;
+constexpr int MENU_COUNT = 9;
 extern const char* menuItems[];
 extern bool menuNeedsRedraw;
 
@@ -39,6 +39,22 @@ void claudeUsageScreen();
 // ---- sysStats.cpp ----
 bool parseSysStatsJson(const char* json);
 void sysStatsScreen();
+
+// ---- processWatch.cpp ----
+bool parseProcessJson(const char* json);
+void processWatchScreen();
+
+// ---- stopwatch.cpp ----
+void stopwatchScreen();
+
+// ---- bleScanner.cpp ----
+void bleScannerScreen();
+
+// ---- matrixRain.cpp ----
+void matrixRainScreen();
+
+// ---- pomodoro.cpp ----
+void pomodoroScreen();
 
 // ---- bluetooth.cpp ----
 void bleInit();

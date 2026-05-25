@@ -18,7 +18,7 @@ void drawBrightness()
   tft.setTextColor(tft.color565(0, 220, 245), tft.color565(0, 8, 20));
   tft.drawString("// SETTINGS", 10, 7);
   tft.setTextSize(1);
-  tft.setTextColor(tft.color565(0, 120, 150), tft.color565(0, 8, 20));
+  tft.setTextColor(tft.color565(0, 158, 188), tft.color565(0, 8, 20));
   tft.drawString("BACKLIGHT", 256, 12);
   tft.drawFastHLine(0, 29, 320, tft.color565(0, 100, 130));
   for (int xi = 8; xi < 320; xi += 14)
@@ -68,16 +68,15 @@ void drawBrightness()
 
   // MIN / MAX labels
   tft.setTextSize(1);
-  tft.setTextColor(tft.color565(0, 100, 120), TFT_BLACK);
+  tft.setTextColor(tft.color565(0, 148, 170), TFT_BLACK);
   tft.drawString("MIN", BAR_X,               BAR_Y + BAR_H + 8);
   tft.drawString("MAX", BAR_X + BAR_W - 18,  BAR_Y + BAR_H + 8);
 
-  // Hint
-  tft.setTextColor(tft.color565(0, 80, 100), TFT_BLACK);
-  tft.drawString("[<][>] ADJUST     [PRESS] / [C] BACK", 20, 194);
-
-  // Footer left accent bar
+  // Footer
   tft.fillRect(0, 219, 3, 21, tft.color565(0, 200, 230));
+  tft.setTextSize(1);
+  tft.setTextColor(tft.color565(0, 100, 118), TFT_BLACK);
+  tft.drawString("[<][>] ADJUST     [PRESS] / [C] BACK", 8, 225);
 
   drawBatteryStatus(TFT_BLACK);
 }

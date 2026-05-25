@@ -96,6 +96,8 @@ void checkBLE()
         g_blePending = false;
         if (strstr(g_bleBuf, "\"cpu\":"))
             parseSysStatsJson(g_bleBuf);
+        else if (strstr(g_bleBuf, "\"p\":[" ))
+            parseProcessJson(g_bleBuf);
         else
             parseUsageJson(g_bleBuf);
     }

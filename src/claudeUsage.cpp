@@ -95,6 +95,8 @@ void checkSerial()
                 serialBuf[serialPos] = '\0';
                 if (strstr(serialBuf, "\"cpu\":"))
                     parseSysStatsJson(serialBuf);
+                else if (strstr(serialBuf, "\"p\":[" ))
+                    parseProcessJson(serialBuf);
                 else
                     parseUsageJson(serialBuf);
                 serialPos = 0;
@@ -179,7 +181,7 @@ static void drawUsageRow(const char* label, float pct, int resetMins, const char
     tft.drawString(resetBuf, 20, barY + barH + 4);
 
     if (resetStr && resetStr[0] != '\0') {
-        tft.setTextColor(tft.color565(152, 118, 102), TFT_BLACK);
+        tft.setTextColor(tft.color565(185, 148, 128), TFT_BLACK);
         tft.drawString(resetStr, 20, barY + barH + 14);
     }
 }
@@ -197,7 +199,7 @@ static void drawClaudeUsage()
     tft.setTextColor(tft.color565(217, 119, 87), tft.color565(16, 6, 3));
     tft.drawString("// CLAUDE_USAGE", 10, 7);
     tft.setTextSize(1);
-    tft.setTextColor(tft.color565(110, 52, 30), tft.color565(16, 6, 3));
+    tft.setTextColor(tft.color565(168, 82, 52), tft.color565(16, 6, 3));
     tft.drawString("AI USAGE", 258, 12);
     tft.drawFastHLine(0, 29, 320, tft.color565(100, 45, 25));
     for (int xi = 8; xi < 320; xi += 14)
@@ -224,24 +226,24 @@ static void drawClaudeUsage()
         cybBox(10, 48, 300, 160, nc, 12);
         tft.drawFastHLine(11, 49, 298, tft.color565(40, 15, 8));    // scan-line accent
 
-        drawClaudeStar(160, 82, nc);
+        drawClaudeStar(160, 68, nc);
 
         tft.setTextSize(2);
         tft.setTextColor(nc, nbg);
-        tft.drawString("> NO_DATA", 66, 96);
+        tft.drawString("> NO_DATA", 50, 90);
 
         tft.setTextSize(1);
         tft.setTextColor(ndim, nbg);
-        tft.drawString("AWAITING DATA STREAM...", 24, 122);
-        tft.drawString("USB:  claude_sender.py <port>", 24, 136);
-        tft.drawString("BLE:  claude_sender.py --ble", 24, 148);
+        tft.drawString("AWAITING DATA STREAM...", 50, 118);
+        tft.drawString("USB:  claude_sender.py <port>", 50, 134);
+        tft.drawString("BLE:  claude_sender.py --ble", 50, 150);
 
-        tft.setTextColor(tft.color565(100, 52, 32), nbg);
-        tft.drawString(Serial ? "STATUS: USB ACTIVE" : "STATUS: WAITING...", 24, 163);
+        tft.setTextColor(tft.color565(110, 62, 38), nbg);
+        tft.drawString(Serial ? "STATUS: USB ACTIVE" : "STATUS: WAITING...", 50, 166);
         char addrLine[40];
         snprintf(addrLine, sizeof(addrLine), "ADDR:  %s",
                  bleInitDone ? getBLEAddress() : "INIT...");
-        tft.drawString(addrLine, 24, 175);
+        tft.drawString(addrLine, 50, 182);
     }
     else
     {
@@ -279,7 +281,7 @@ static void drawClaudeUsage()
     // Footer
     tft.fillRect(0, 219, 3, 21, tft.color565(217, 119, 87));        // coral accent bar
     tft.setTextSize(1);
-    tft.setTextColor(tft.color565(110, 60, 38), TFT_BLACK);
+    tft.setTextColor(tft.color565(130, 68, 42), TFT_BLACK);
     tft.drawString("[C] BACK", 8, 225);
 
     drawBatteryStatus(TFT_BLACK);

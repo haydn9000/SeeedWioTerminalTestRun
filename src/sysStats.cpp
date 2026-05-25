@@ -277,7 +277,7 @@ static void drawSysStats()
     tft.setTextColor(tft.color565(0, 220, 245), tft.color565(0, 8, 20));
     tft.drawString("// SYS_STATS", 10, 7);
     tft.setTextSize(1);
-    tft.setTextColor(tft.color565(0, 120, 150), tft.color565(0, 8, 20));
+    tft.setTextColor(tft.color565(0, 158, 188), tft.color565(0, 8, 20));
     tft.drawString("LIVE", 289, 12);
 
     // Ticked divider
@@ -297,20 +297,20 @@ static void drawSysStats()
 
         tft.setTextSize(2);
         tft.setTextColor(nc, nbg);
-        tft.drawString("> NO_DATA", 24, 68);
+        tft.drawString("> NO_DATA", 50, 90);
 
         tft.setTextSize(1);
         tft.setTextColor(ndim, nbg);
-        tft.drawString("AWAITING DATA STREAM...", 24, 100);
-        tft.drawString("USB:  sysstat_sender.py <port>", 24, 116);
-        tft.drawString("BLE:  sysstat_sender.py --ble", 24, 128);
+        tft.drawString("AWAITING DATA STREAM...", 50, 118);
+        tft.drawString("USB:  sysstat_sender.py <port>", 50, 134);
+        tft.drawString("BLE:  sysstat_sender.py --ble", 50, 150);
 
-        tft.setTextColor(tft.color565(0, 85, 105), nbg);
-        tft.drawString(Serial ? "STATUS: USB ACTIVE" : "STATUS: WAITING...", 24, 146);
+        tft.setTextColor(tft.color565(0, 80, 100), nbg);
+        tft.drawString(Serial ? "STATUS: USB ACTIVE" : "STATUS: WAITING...", 50, 166);
         char addrLine[40];
         snprintf(addrLine, sizeof(addrLine), "ADDR:  %s",
                  bleInitDone ? getBLEAddress() : "INIT...");
-        tft.drawString(addrLine, 24, 158);
+        tft.drawString(addrLine, 50, 182);
     }
     else
     {
@@ -351,7 +351,7 @@ static void drawSysStats()
     // Footer
     tft.fillRect(0, 219, 3, 21, tft.color565(0, 200, 230));        // left accent bar
     tft.setTextSize(1);
-    tft.setTextColor(tft.color565(0, 80, 100), TFT_BLACK);
+    tft.setTextColor(tft.color565(0, 100, 118), TFT_BLACK);
     tft.drawString("[C] EXIT", 8, 225);
     drawBatteryStatus(TFT_BLACK);
 }

@@ -10,6 +10,40 @@ static bool lisReady = false;
 //========================================================================= NAVIGATION
 // Renders the full menu to the display. Called only when something changes
 // to avoid unnecessary screen clears (which cause visible flicker).
+static void drawMenuCell(int i)
+{
+  int row = i / 2;
+  int col = i % 2;
+  int bx  = (col == 0) ? 10 : 162;
+  int by  = 32 + row * 37;
+  int bw  = 148;
+  int bh  = 35;
+  if (i == menuIndex)
+  {
+    uint16_t selBg  = tft.color565(0, 35, 50);
+    uint16_t selCol = tft.color565(0, 220, 245);
+    tft.fillRect(bx, by, bw, bh, selBg);
+    tft.drawRect(bx, by, bw, bh, selCol);
+    int t = 5;
+    tft.drawFastHLine(bx,      by,      t, selCol); tft.drawFastVLine(bx,      by,      t, selCol);
+    tft.drawFastHLine(bx+bw-t, by,      t, selCol); tft.drawFastVLine(bx+bw-1, by,      t, selCol);
+    tft.drawFastHLine(bx,      by+bh-1, t, selCol); tft.drawFastVLine(bx,      by+bh-t, t, selCol);
+    tft.drawFastHLine(bx+bw-t, by+bh-1, t, selCol); tft.drawFastVLine(bx+bw-1, by+bh-t, t, selCol);
+    tft.setTextSize(2);
+    tft.setTextColor(selCol, selBg);
+    tft.drawString(">",          bx + 5,  by + 9);
+    tft.drawString(menuItems[i], bx + 18, by + 9);
+  }
+  else
+  {
+    tft.fillRect(bx, by, bw, bh, tft.color565(0, 8, 15));
+    tft.drawRect(bx, by, bw, bh, tft.color565(15, 30, 42));
+    tft.setTextSize(2);
+    tft.setTextColor(tft.color565(80, 110, 120), tft.color565(0, 8, 15));
+    tft.drawString(menuItems[i], bx + 10, by + 9);
+  }
+}
+
 void drawMenu()
 {
   tft.fillScreen(TFT_BLACK);
@@ -21,94 +55,73 @@ void drawMenu()
   tft.setTextColor(tft.color565(0, 220, 245), tft.color565(0, 8, 20));
   tft.drawString("// MENU", 10, 7);
   tft.setTextSize(1);
-  tft.setTextColor(tft.color565(0, 90, 110), tft.color565(0, 8, 20));
+    tft.setTextColor(tft.color565(0, 148, 170), tft.color565(0, 8, 20));
   tft.drawString("NAVIGATE", 257, 12);
   tft.drawFastHLine(0, 29, 320, tft.color565(0, 80, 100));
   for (int xi = 8; xi < 320; xi += 14)
       tft.drawFastVLine(xi, 27, 4, tft.color565(0, 140, 165));
 
-  // --- Menu items ---
-  for (int i = 0; i < MENU_COUNT; i++)
-  {
-    int bx = 20;
-    int by = 35 + i * 44;
-    int bw = 280;
-    int bh = 38;
-
-    if (i == menuIndex)
-    {
-      uint16_t selBg  = tft.color565(0, 35, 50);
-      uint16_t selCol = tft.color565(0, 220, 245);
-      tft.fillRect(bx, by, bw, bh, selBg);
-      tft.drawRect(bx, by, bw, bh, selCol);
-      // corner brackets
-      int t = 8;
-      tft.drawFastHLine(bx,       by,       t, selCol);
-      tft.drawFastVLine(bx,       by,       t, selCol);
-      tft.drawFastHLine(bx+bw-t,  by,       t, selCol);
-      tft.drawFastVLine(bx+bw-1,  by,       t, selCol);
-      tft.drawFastHLine(bx,       by+bh-1,  t, selCol);
-      tft.drawFastVLine(bx,       by+bh-t,  t, selCol);
-      tft.drawFastHLine(bx+bw-t,  by+bh-1,  t, selCol);
-      tft.drawFastVLine(bx+bw-1,  by+bh-t,  t, selCol);
-      tft.setTextSize(2);
-      tft.setTextColor(selCol, selBg);
-      tft.drawString(">", bx + 8, by + 11);
-      tft.drawString(menuItems[i], bx + 30, by + 11);
-    }
-    else
-    {
-      tft.fillRect(bx, by, bw, bh, tft.color565(0, 8, 15));
-      tft.drawRect(bx, by, bw, bh, tft.color565(15, 30, 42));
-      tft.setTextSize(2);
-      tft.setTextColor(tft.color565(80, 110, 120), tft.color565(0, 8, 15));
-      tft.drawString(menuItems[i], bx + 30, by + 11);
-    }
-  }
+  // --- 2-column grid (4 rows × 2 cols) ---
+  for (int i = 0; i < MENU_COUNT; i++) drawMenuCell(i);
 
   // --- Footer ---
   tft.fillRect(0, 219, 3, 21, tft.color565(0, 220, 245));
   tft.setTextSize(1);
-  tft.setTextColor(tft.color565(0, 100, 120), TFT_BLACK);
-  tft.drawString("[UP/DOWN] NAV   [PRESS] SELECT", 8, 225);
+tft.setTextColor(tft.color565(0, 100, 118), TFT_BLACK);
+  tft.drawString("[UP/DN] ROW   [L/R] COL   [PRESS] SELECT", 8, 225);
 
   drawBatteryStatus(TFT_BLACK);
 }
 
 // Called every loop iteration while optionTest == 'C'.
-// Reads joystick input and redraws the menu only when the selection changes.
+// Navigation moves only repaint the two affected cells — no fillScreen flash.
+// Full drawMenu() is used on first draw and on return from a sub-screen.
 void navigation()
 {
-  // Consume the redraw flag set by external callers (e.g. returning from a sub-screen).
-  bool changed = menuNeedsRedraw;
-  menuNeedsRedraw = false;
+  if (menuNeedsRedraw) { menuNeedsRedraw = false; drawMenu(); return; }
+
+  int prev = menuIndex;
 
   if (digitalRead(WIO_5S_UP) == LOW)
   {
-    menuIndex = (menuIndex - 1 + MENU_COUNT) % MENU_COUNT;
+    if (menuIndex >= 2) menuIndex -= 2;
     delay(200);
-    changed = true;
   }
   else if (digitalRead(WIO_5S_DOWN) == LOW)
   {
-    menuIndex = (menuIndex + 1) % MENU_COUNT;
+    if (menuIndex + 2 < MENU_COUNT) menuIndex += 2;
     delay(200);
-    changed = true;
+  }
+  else if (digitalRead(WIO_5S_LEFT) == LOW)
+  {
+    if (menuIndex % 2 == 1) menuIndex--;
+    delay(200);
+  }
+  else if (digitalRead(WIO_5S_RIGHT) == LOW)
+  {
+    if (menuIndex % 2 == 0 && menuIndex + 1 < MENU_COUNT) menuIndex++;
+    delay(200);
   }
   else if (digitalRead(WIO_5S_PRESS) == LOW)
   {
     switch (menuIndex)
     {
-      case 0: homeScreen(); break;
-      case 1: claudeUsageScreen(); break;
-      case 2: sysStatsScreen(); break;
-      case 3: setBrightness(); break;
+      case 0: homeScreen();         break;
+      case 1: sysStatsScreen();     break;
+      case 2: pomodoroScreen();     break;
+      case 3: stopwatchScreen();    break;
+      case 4: claudeUsageScreen();  break;
+      case 5: processWatchScreen(); break;
+      case 6: bleScannerScreen();   break;
+      case 7: matrixRainScreen();   break;
+      case 8: setBrightness();      break;
     }
     delay(200);
-    changed = true;
+    menuNeedsRedraw = true;
+    return;
   }
 
-  if (changed) drawMenu();
+  if (menuIndex != prev) { drawMenuCell(prev); drawMenuCell(menuIndex); }
 }
 
 
@@ -183,7 +196,7 @@ static void drawHomeFrame()
     tft.setTextColor(tft.color565(0, 220, 245), tft.color565(0, 8, 20));
     tft.drawString("// HOME", 10, 7);
     tft.setTextSize(1);
-    tft.setTextColor(tft.color565(0, 120, 150), tft.color565(0, 8, 20));
+    tft.setTextColor(tft.color565(0, 158, 188), tft.color565(0, 8, 20));
     tft.drawString("SENSORS", 272, 12);
     tft.drawFastHLine(0, 29, 320, tft.color565(0, 100, 130));
     for (int xi = 8; xi < 320; xi += 14)
@@ -214,7 +227,7 @@ static void drawHomeFrame()
 
     // Footer
     tft.fillRect(0, 219, 3, 21, tft.color565(0, 200, 230));
-    tft.setTextColor(tft.color565(0, 80, 100), TFT_BLACK);
+    tft.setTextColor(tft.color565(0, 100, 118), TFT_BLACK);
     tft.drawString("[C] EXIT", 8, 225);
 
     drawBatteryStatus(TFT_BLACK);
