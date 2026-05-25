@@ -161,7 +161,10 @@ static void pomAdvance()
 }
 
 // -------------------------------------------------------------------------
-// Full-screen redraw — called on state changes (phase, lap, pause/resume).
+// Update only the countdown and progress bar — called every loop tick.
+static char pomPrevBuf[8] = "";
+static int  pomPrevFill  = -1;   // last painted fill width; -1 = needs full draw
+
 static void drawPomFrame()
 {
     uint16_t ac  = pomAccent();
@@ -210,8 +213,10 @@ static void drawPomFrame()
     // --- Big countdown (timer is drawn by drawPomTick) ---
     // placeholder space: y=58 to y=90 (size 4, 32 px tall)
 
-    // --- Progress bar ---
-    // drawn by drawPomTick at y=100
+    // --- Progress bar outline (fill updated incrementally by drawPomTick) ---
+    tft.fillRect(10, 100, 300, 10, TFT_BLACK);   // clear interior
+    tft.drawRect( 9,  99, 302, 12, acd);          // border 1 px outside fill area
+    pomPrevFill = -1;                             // force fresh fill on first tick
 
     // --- Divider ---
     tft.drawFastHLine(0, 116, 320, acd);
@@ -247,13 +252,9 @@ static void drawPomFrame()
 }
 
 // -------------------------------------------------------------------------
-// Update only the countdown and progress bar — called every loop tick.
-static char pomPrevBuf[8] = "";
-
 static void drawPomTick()
 {
     uint16_t ac  = pomAccent();
-    uint16_t acd = pomAccentDim();
     uint32_t tl  = pomTimeLeft();
 
     // Big countdown — "MM:SS" (5 chars at size 4 ≈ 125 px → centre x=98)
@@ -266,17 +267,24 @@ static void drawPomTick()
         tft.drawString(buf, 98, 58);
     }
 
-    // Progress bar
+    // Progress bar — incremental repaint; border already drawn in drawPomFrame().
+    // Only the changed segment is touched, eliminating erase-then-redraw flicker.
     float pct = POM_DUR[pomPhase] > 0
                 ? (float)pomElapsed() / (float)POM_DUR[pomPhase]
                 : 0.0f;
     if (pct > 1.0f) pct = 1.0f;
+    int fill = (int)(300 * pct);
 
-    int barX = 10, barY = 100, barW = 300, barH = 10;
-    tft.fillRect(barX, barY, barW, barH, TFT_BLACK);
-    if (pct > 0.0f)
-        tft.fillRect(barX, barY, (int)(barW * pct), barH, ac);
-    tft.drawRect(barX, barY, barW, barH, acd);
+    if (fill > pomPrevFill) {
+        // Bar grew: paint only the new segment
+        int x = (pomPrevFill < 0) ? 10 : 10 + pomPrevFill;
+        int w = (pomPrevFill < 0) ? fill : fill - pomPrevFill;
+        if (w > 0) tft.fillRect(x, 100, w, 10, ac);
+    } else if (fill < pomPrevFill) {
+        // Bar shrank (reset / phase change): erase the vacated segment
+        tft.fillRect(10 + fill, 100, pomPrevFill - fill, 10, TFT_BLACK);
+    }
+    pomPrevFill = fill;
 }
 
 // -------------------------------------------------------------------------
