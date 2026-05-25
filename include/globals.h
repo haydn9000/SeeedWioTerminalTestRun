@@ -12,7 +12,7 @@ extern bool bleInitDone;
 
 // ---- Menu state (defined in main.cpp) ----
 extern int menuIndex;
-constexpr int MENU_COUNT = 9;
+constexpr int MENU_COUNT = 10;
 extern const char* menuItems[];
 extern bool menuNeedsRedraw;
 
@@ -46,6 +46,9 @@ void processWatchScreen();
 
 // ---- stopwatch.cpp ----
 void stopwatchScreen();
+
+// ---- countdownTimer.cpp ----
+void countdownTimerScreen();
 
 // ---- bleScanner.cpp ----
 void bleScannerScreen();

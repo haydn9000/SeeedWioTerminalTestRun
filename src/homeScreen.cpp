@@ -106,15 +106,16 @@ void navigation()
   {
     switch (menuIndex)
     {
-      case 0: homeScreen();         break;
-      case 1: sysStatsScreen();     break;
-      case 2: pomodoroScreen();     break;
-      case 3: stopwatchScreen();    break;
-      case 4: claudeUsageScreen();  break;
-      case 5: processWatchScreen(); break;
-      case 6: bleScannerScreen();   break;
-      case 7: matrixRainScreen();   break;
-      case 8: setBrightness();      break;
+      case 0: homeScreen();              break;
+      case 1: sysStatsScreen();          break;
+      case 2: pomodoroScreen();          break;
+      case 3: stopwatchScreen();         break;
+      case 4: countdownTimerScreen();    break;
+      case 5: claudeUsageScreen();       break;
+      case 6: processWatchScreen();      break;
+      case 7: bleScannerScreen();        break;
+      case 8: matrixRainScreen();        break;
+      case 9: setBrightness();           break;
     }
     delay(200);
     menuNeedsRedraw = true;
