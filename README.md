@@ -17,7 +17,7 @@ A personal toolkit for the [Seeed Wio Terminal](https://wiki.seeedstudio.com/Wio
 | **Sys Stats** | `sysStats.cpp` | Arc gauges for CPU, RAM, GPU, VRAM usage + temperatures and network bandwidth, fed over USB serial or BLE | <img src="img/sysstats-screen.BMP" width="240"> |
 | **Process Watch** | `processWatch.cpp` | Top-5 CPU processes by usage, fed over USB serial or BLE | <img src="img/processes-screen.BMP" width="240"> |
 | **WiFi Scanner** | `wifiScanner.cpp` | Scans for nearby 2.4 GHz + 5 GHz networks and displays SSID, signal strength, and auth type | |
-| **BLE Scanner** | `bleScanner.cpp` | Scans for nearby BLE devices and displays RSSI signal strength | <img src="img/ble-scan-screen.BMP" width="240"> |
+| **BLE Scanner** | `bleScanner.cpp` | Scans for nearby BLE devices and displays RSSI signal strength | |
 | **SD Card Viewer** | `sdCardViewer.cpp` | Browse and display BMP images stored on the microSD card | |
 | **Matrix Rain** | `matrixRain.cpp` | Animated Matrix-style digital rain | <img src="img/matrix-screen.BMP" width="240"> |
 | **Settings** | `backlight.cpp` | Joystick-adjustable backlight brightness (5–100%) | <img src="img/settings-screen.BMP" width="240"> |
