@@ -2,7 +2,7 @@
 
 ## Project overview
 
-A personal toolkit for the Seeed Wio Terminal. Each screen is a `.cpp` file with a single blocking function; the joystick-navigated menu wires them together. Currently ships with a Home sensor dashboard, a Claude Usage screen, a Sys Stats screen, and a brightness settings screen. New screens slot in without touching anything outside `homeScreen.cpp` and `globals.h`.
+A personal toolkit for the Seeed Wio Terminal. Each screen is a `.cpp` file with a single blocking function; the joystick-navigated menu wires them together. Currently ships with twelve screens: Home sensor dashboard, Sys Stats, Pomodoro timer, Stopwatch, Countdown timer, Claude Usage, Process Watch, WiFi Scanner, BLE Scanner, SD Card Viewer, Matrix Rain, and a brightness Settings screen. New screens slot in without touching anything outside `main.cpp` and `globals.h`.
 
 Built with PlatformIO (`atmelsam` platform, `arduino` framework, `seeed_wio_terminal` board).
 
@@ -44,20 +44,31 @@ pio run --target upload   # build + upload over USB (bossac)
 
 ```
 src/
-  main.cpp          — Global definitions, setup(), loop(), top-level screen dispatch
-  homeScreen.cpp    — Menu render + joystick navigation; register new screens here
-  backlight.cpp     — Brightness sub-screen (setBrightness)
-  battery.cpp       — BQ27441-G1A I²C driver + drawBatteryStatus() overlay
-  bluetooth.cpp     — BLE GATT peripheral (WT-001); deferred init, on-demand advertising
-  claudeUsage.cpp   — Claude Usage screen: JSON parser, serial reader, usage display
-  sysStats.cpp      — Sys Stats screen: arc gauges for CPU/RAM/GPU/network via sysstat_sender.py
+  main.cpp             — Global definitions, setup(), loop(), top-level screen dispatch
+  homeScreen.cpp       — Menu render + joystick navigation; register new screens here
+  backlight.cpp        — Brightness sub-screen (setBrightness)
+  battery.cpp          — BQ27441-G1A I²C driver + drawBatteryStatus() overlay
+  bluetooth.cpp        — BLE GATT peripheral (WT-001); deferred init, on-demand advertising
+  claudeUsage.cpp      — Claude Usage screen: JSON parser, serial reader, usage display
+  sysStats.cpp         — Sys Stats screen: arc gauges for CPU/RAM/GPU/network via sysstat_sender.py
+  pomodoro.cpp         — Pomodoro timer: 4×(25 min work / 5 min break) + 15 min long break; buzzer alerts
+  stopwatch.cpp        — Stopwatch with lap splits
+  countdownTimer.cpp   — Countdown timer: HH:MM:SS input, hold-to-repeat, buzzer on expiry
+  processWatch.cpp     — Top-5 CPU processes by usage, fed via process_sender.py
+  wifiScanner.cpp      — WiFi scanner: 2.4 GHz + 5 GHz networks, SSID/RSSI/auth display
+  bleScanner.cpp       — BLE device scanner: nearby devices + RSSI bars
+  sdCardViewer.cpp     — SD card BMP viewer: browse and display 24/32-bit BMP images
+  screenshot.cpp       — KEY_B handler: saves 24-bit BGR BMP to microSD as SCRN####.BMP
+  matrixRain.cpp       — Animated Matrix-style digital rain
 include/
-  globals.h         — extern declarations and function prototypes for all .cpp files
-  lcd_backlight.hpp — SAMD51 TC0 PWM backlight driver (Seeed original, Boost licence)
+  globals.h            — extern declarations and function prototypes for all .cpp files
+  lcd_backlight.hpp    — SAMD51 TC0 PWM backlight driver (Seeed original, Boost licence)
+  RawImage.h           — Seeed template for loading pre-converted raw bitmap format
 tools/
-  claude_sender.py  — Feeds Claude usage data over USB serial (default) or BLE (--ble flag)
-  sysstat_sender.py — Feeds PC system stats (CPU/RAM/GPU/net) over USB serial or BLE (--ble flag)
-  bitmap-converter/ — PySide6 GUI for converting images to Wio Terminal bitmap format
+  claude_sender.py     — Feeds Claude usage data over USB serial (default) or BLE (--ble flag)
+  process_sender.py    — Feeds top CPU processes over USB serial or BLE (--ble flag)
+  sysstat_sender.py    — Feeds PC system stats (CPU/RAM/GPU/net) over USB serial or BLE (--ble flag)
+  bitmap-converter/    — PySide6 GUI for converting images to Wio Terminal bitmap format
 ```
 
 ## Adding a new screen
@@ -104,13 +115,15 @@ Add a label to `menuItems[]` in `main.cpp` (increment `MENU_COUNT` in `globals.h
 
 ```cpp
 // In main.cpp — menuItems array
-const char* menuItems[] = { "Home", "Claude Usage", "My Screen", "Settings" };
+const char* menuItems[] = { "HOME", "POMODORO", "STOPWATCH", "COUNTDOWN", "CLAUDE",
+                             "SYS STATS", "PROCS", "WIFI SCAN", "BLE SCAN",
+                             "SD VIEW", "MATRIX", "SETTINGS", "My Screen" };
 
 // In globals.h — update the count
-constexpr int MENU_COUNT = 4;
+constexpr int MENU_COUNT = 13;
 
 // In homeScreen.cpp — navigation() switch
-case 2: myScreen(); break;
+case 12: myScreen(); break;
 ```
 
 ## Shared infrastructure
@@ -147,6 +160,16 @@ Each sub-screen is a **blocking loop** that returns when the user exits. On retu
 ### BLE lifecycle
 `BLEDevice::init()` talks to the RTL8720DN and can stall if called too early. It is deferred until `millis() > 3000` in `loop()`, after the first frame has rendered in `setup()`. Any screen that wants BLE calls `bleSetActive(true)` on entry and `bleSetActive(false)` on exit; advertising stops automatically.
 
+`bleSetActive(true)` calls `ble_start()` automatically if the GAP state machine has not been started yet (e.g. immediately after boot, or after a WiFi scan resets the flag).
+
+**BLE Scanner entry** always calls `bleHardReset()`: `ble_deinit()` + 500 ms settle + full `bleInit()` (re-registers GATT profile on RTL8720DN). This guarantees a clean scan state regardless of prior WiFi activity or advertising. `doBleScan()` then calls `ble_start()` (via the `ble_start_flags` check) before issuing `le_scan_timer_start()`.
+
+### WiFi + BLE interaction
+The RTL8720DN runs WiFi and BLE as independent firmware modules. `wifi_off()` / `wifi_on()` (called by `WiFi.mode()`) reset the radio coexistence state but do not touch the BLE firmware module. After exiting the WiFi scanner, `bleReinit()` resets `ble_start_flags` so the next BLE operation re-issues `ble_start()`. BLE data screens (Claude, Sys Stats, Process Watch) re-start advertising correctly via the `ble_start()` guard in `bleSetActive(true)`.
+
+### SD card viewer
+`sdCardViewer.cpp` reads BMP files from the microSD card root. Supported formats: 24-bit BI_RGB and 32-bit BI_RGB/BI_BITFIELDS (Windows default export). Pixel conversion: `color565()` returns little-endian values; SAMD51 DMA (`pushImage()`) sends memory byte-order to the ILI9341 which expects big-endian — rows are byte-swapped with `(c >> 8) | (c << 8)` before the `pushImage()` call. File entries from `entry.name()` return the full FatFS path (`0:/SCRN0001.BMP`); the viewer strips to the bare filename via `strrchr(full, '/')` before calling `SD.open()` (which must not include a leading `/`).
+
 ### Battery detection
 The SAMD51 Wire bus can return a false ACK on the first probe. `batteryBegin()` follows the address probe with an actual register read to confirm the BQ27441 is present. Returns false silently on hardware without the compatible chassis — `drawBatteryStatus()` becomes a no-op.
 
@@ -155,9 +178,10 @@ The SAMD51 Wire bus can return a false ACK on the first probe. `batteryBegin()` 
 | Library | Purpose |
 |---|---|
 | `Seeed_Arduino_LCD` | TFT_eSPI fork pre-configured for Wio Terminal |
-| `Seeed_Arduino_FS` | Filesystem support (transitive dep of Seeed_GFX) |
-| `Seeed_Arduino_rpcUnified` | RTL8720DN RPC transport (transitive dep of rpcBLE) |
+| `Seeed_Arduino_FS` | Filesystem + SD card support |
+| `Seeed_Arduino_rpcUnified` | RTL8720DN RPC transport (transitive dep of rpcBLE + rpcWiFi) |
 | `Seeed_Arduino_rpcBLE` | BLE GATT stack for the RTL8720DN co-processor |
+| `Seeed_Arduino_rpcWiFi` | WiFi driver for the RTL8720DN co-processor |
 
 **TFT_eSPI conflict:** if you see "Multiple libraries found for TFT_eSPI.h", a community TFT_eSPI install is shadowing the Seeed fork. Remove any non-Seeed TFT_eSPI from your Arduino libraries folder — the Seeed fork is the one configured for this hardware.
 
