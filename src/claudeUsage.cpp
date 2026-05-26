@@ -327,6 +327,12 @@ void claudeUsageScreen()
             drawClaudeUsage();
         }
 
+        if (digitalRead(WIO_KEY_B) == LOW)
+        {
+            while (digitalRead(WIO_KEY_B) == LOW) { delay(10); }
+            takeScreenshot();
+        }
+
         if (digitalRead(WIO_KEY_C) == LOW)
         {
             while (digitalRead(WIO_KEY_C) == LOW) { delay(10); }
@@ -336,5 +342,3 @@ void claudeUsageScreen()
         }
     }
 }
-
-

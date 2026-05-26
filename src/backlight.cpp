@@ -81,6 +81,33 @@ void drawBrightness()
   drawBatteryStatus(TFT_BLACK);
 }
 
+// Redraws only the value text and bar — no fillScreen, so adjustments are flicker-free.
+static void refreshBrightnessBar()
+{
+  // Erase the old value text (size-6 text is ~48px tall starting at y=52).
+  tft.fillRect(0, 52, 320, 64, TFT_BLACK);
+
+  uint16_t valCol = (brightness < 40) ? tft.color565(0, 170, 200) :
+                    (brightness < 75) ? tft.color565(0, 220, 245) :
+                                        tft.color565(200, 240, 255);
+  tft.setTextSize(6);
+  tft.setTextColor(valCol, TFT_BLACK);
+  char buf[8];
+  sprintf(buf, "%d%%", brightness);
+  int textW = tft.textWidth(buf);
+  tft.drawString(buf, (320 - textW) / 2, 52);
+
+  // Redraw segmented bar only.
+  const int BAR_X = 20, BAR_Y = 140, BAR_W = 280, BAR_H = 26;
+  const int N_SEGS = 20, SEG_GAP = 2, SEG_W = BAR_W / N_SEGS;
+  int litSegs = brightness / 5;
+  for (int s = 0; s < N_SEGS; s++) {
+    bool lit = (s < litSegs);
+    uint16_t col = lit ? tft.color565(0, 210, 240) : tft.color565(12, 20, 38);
+    tft.fillRect(BAR_X + s * SEG_W, BAR_Y, SEG_W - SEG_GAP, BAR_H, col);
+  }
+}
+
 // Brightness adjustment sub-screen. Blocks until the user exits.
 void setBrightness()
 {
@@ -96,7 +123,7 @@ void setBrightness()
     {
       brightness += 5;
       backLight.setBrightness(brightness);
-      drawBrightness();
+      refreshBrightnessBar();
       delay(150);
     }
     else if (digitalRead(WIO_5S_LEFT) == LOW && brightness > MIN_BRIGHTNESS)
@@ -104,8 +131,13 @@ void setBrightness()
       brightness -= 5;
       if (brightness < MIN_BRIGHTNESS) brightness = MIN_BRIGHTNESS;
       backLight.setBrightness(brightness);
-      drawBrightness();
+      refreshBrightnessBar();
       delay(150);
+    }
+    else if (digitalRead(WIO_KEY_B) == LOW)
+    {
+      while (digitalRead(WIO_KEY_B) == LOW) { delay(10); }
+      takeScreenshot();
     }
     else if (digitalRead(WIO_5S_PRESS) == LOW || digitalRead(WIO_KEY_C) == LOW)
     {

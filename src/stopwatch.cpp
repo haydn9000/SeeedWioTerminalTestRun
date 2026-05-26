@@ -143,6 +143,21 @@ static void drawStopwatchTime(uint32_t ms)
 }
 
 // -------------------------------------------------------------------------
+// Updates only the status badge — avoids fillScreen flicker on pause/unpause.
+static void drawSwStatus()
+{
+    tft.fillRect(0, 32, 200, 14, TFT_BLACK);   // left half only — preserves lap counter
+    tft.setTextSize(1);
+    uint16_t stCol;
+    const char* stLabel;
+    if (swRunning)          { stCol = tft.color565(60, 210, 100);  stLabel = "\xB7 RUNNING"; }
+    else if (swElapsed > 0) { stCol = tft.color565(210, 175,   0); stLabel = "| PAUSED";   }
+    else                    { stCol = tft.color565(0, 148, 170);   stLabel = "  READY";    }
+    tft.setTextColor(stCol, TFT_BLACK);
+    tft.drawString(stLabel, 12, 35);
+}
+
+// -------------------------------------------------------------------------
 void stopwatchScreen()
 {
     while (digitalRead(WIO_5S_PRESS) == LOW) delay(10);
@@ -173,7 +188,10 @@ void stopwatchScreen()
             if (swRunning) { swElapsed = swCurrentMs(); swRunning = false; }
             else           { swStartMs = millis(); swRunning = true; }
             while (digitalRead(WIO_5S_PRESS) == LOW) delay(10);
-            frameNeeded = true;
+            // Partial update: only badge + timer colour change — no fillScreen.
+            swPrevBuf[0] = '\0';   // force timer colour refresh
+            drawSwStatus();
+            drawStopwatchTime(swCurrentMs());
         }
         // [RIGHT] lap — only while running, max 8 laps
         else if (digitalRead(WIO_5S_RIGHT) == LOW && swRunning && swLapCount < 8)
@@ -190,6 +208,12 @@ void stopwatchScreen()
             lastMs = 0xFFFFFFFF;
             while (digitalRead(WIO_5S_LEFT) == LOW) delay(10);
             frameNeeded = true;
+        }
+        // [B] screenshot
+        else if (digitalRead(WIO_KEY_B) == LOW)
+        {
+            while (digitalRead(WIO_KEY_B) == LOW) delay(10);
+            takeScreenshot();
         }
         // [C] back
         else if (digitalRead(WIO_KEY_C) == LOW)

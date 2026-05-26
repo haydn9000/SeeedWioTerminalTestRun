@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include "globals.h"
+#include <Seeed_FS.h>
+#include <SD/Seeed_SD.h>
 
 TFT_eSPI tft;
 TFT_eSprite spr(&tft);
@@ -10,7 +12,7 @@ static int defaultBrightness = 25;
 char optionTest = 'C';
 
 int menuIndex = 0;
-const char* menuItems[] = { "HOME", "SYS STATS", "POMODORO", "STOPWATCH", "COUNTDOWN", "CLAUDE", "PROCS", "BLE SCAN", "MATRIX", "SETTINGS" };
+const char* menuItems[] = { "HOME", "POMODORO", "STOPWATCH", "COUNTDOWN", "CLAUDE", "SYS STATS", "PROCS", "WIFI SCAN", "BLE SCAN", "SD VIEW", "MATRIX", "SETTINGS" };
 bool menuNeedsRedraw = true;
 bool bleInitDone = false;
 
@@ -46,6 +48,10 @@ void setup()
     Serial.println("[battery] BQ27441 not found — battery overlay disabled");
   }
 
+  // Initialise the SD card once, following the official Seeed docs pattern.
+  // takeScreenshot() uses the already-mounted filesystem; no SD.begin() there.
+  SD.begin(SDCARD_SS_PIN, SDCARD_SPI);
+
   Serial.println("[boot] setup complete");
 
   // Draw the menu immediately so the screen is live before BLE init can hang.
@@ -77,10 +83,11 @@ void loop()
     menuNeedsRedraw = true;
     optionTest = 'C';
   }
-  // Top button B → placeholder for a future screen.
+  // Top button B → take a screenshot to SD card.
   else if (digitalRead(WIO_KEY_B) == LOW)
   {
-    optionTest = 'B';
+    while (digitalRead(WIO_KEY_B) == LOW) delay(10);
+    takeScreenshot();
   }
   // Top button A → go directly to brightness settings.
   else if (digitalRead(WIO_KEY_A) == LOW)

@@ -102,6 +102,24 @@ static void drawCdProgress()
 }
 
 // -------------------------------------------------------------------------
+// Updates only the status badge — avoids fillScreen flicker on pause/unpause.
+static void drawCdStatus()
+{
+    tft.fillRect(0, 32, 160, 14, TFT_BLACK);
+    const char* label;
+    uint16_t    sc;
+    switch (cdState) {
+        case CD_RUNNING: label = "\xB7 RUNNING"; sc = cdAcc();                    break;
+        case CD_PAUSED:  label = "| PAUSED";    sc = tft.color565(170, 120, 0);   break;
+        case CD_DONE:    label = "! DONE";      sc = cdWarn();                    break;
+        default:         label = "  SETTING";   sc = cdDim();                     break;
+    }
+    tft.setTextSize(1);
+    tft.setTextColor(sc, TFT_BLACK);
+    tft.drawString(label, 12, 35);
+}
+
+// -------------------------------------------------------------------------
 static void drawCdFrame()
 {
     tft.fillScreen(TFT_BLACK);
@@ -226,12 +244,16 @@ void countdownTimerScreen()
                     break;
                 case CD_RUNNING:
                     cdState = CD_PAUSED;
-                    frameNeeded = true;
+                    // Partial update: only badge + timer colour change — no fillScreen.
+                    drawCdStatus();
+                    drawCdTime(true);
                     break;
                 case CD_PAUSED:
                     cdState  = CD_RUNNING;
                     cdLastMs = millis();
-                    frameNeeded = true;
+                    // Partial update: only badge + timer colour change — no fillScreen.
+                    drawCdStatus();
+                    drawCdTime(true);
                     break;
                 case CD_DONE:
                     cdState = CD_SETUP;
@@ -307,6 +329,13 @@ void countdownTimerScreen()
                 }
                 delay(10);
             }
+        }
+
+        // [B]: screenshot
+        else if (digitalRead(WIO_KEY_B) == LOW)
+        {
+            while (digitalRead(WIO_KEY_B) == LOW) delay(10);
+            takeScreenshot();
         }
 
         // [C]: back to menu (pause if running)

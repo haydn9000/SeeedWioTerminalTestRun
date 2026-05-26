@@ -136,6 +136,44 @@ const char* getBLEAddress()
     return addrBuf;
 }
 
+// Call this after WiFi scan to restore BLE functionality.
+// Called after exiting the WiFi scan screen — resets ble_start_flags so the
+// next BLE operation re-issues ble_start() to re-activate the GAP state machine.
+void bleReinit()
+{
+    BLEDevice::ble_start_flags = false;
+    g_bleConnected    = false;
+    g_bleWasConnected = false;
+    g_bleActive       = false;
+    g_blePending      = false;
+    Serial.println("[ble] state reset after WiFi scan");
+}
+
+// bleReinitPending() kept for ABI compat — always returns false.
+bool bleReinitPending() { return false; }
+
+// Full deinit + reinit: tears down the BLE stack on the RTL8720DN and rebuilds
+// it from scratch. Called on BLE scanner entry to guarantee a clean GAP state
+// regardless of previous WiFi or advertising activity.
+void bleHardReset()
+{
+    if (!bleInitDone) return;
+    if (g_bleActive) BLEDevice::stopAdvertising();
+    g_bleActive       = false;
+    g_bleConnected    = false;
+    g_bleWasConnected = false;
+    g_blePending      = false;
+    ble_deinit();
+    delay(500);
+    extern bool initialized;
+    initialized = false;
+    BLEDevice::ble_start_flags = false;
+    g_bleServer = nullptr;
+    g_rxChar    = nullptr;
+    bleInit();   // re-registers GATT profile on RTL8720DN, leaves ble_start_flags=false
+    Serial.println("[ble] hard reset complete");
+}
+
 // Call with true when entering BLE usage mode, false when leaving.
 void bleSetActive(bool active)
 {
@@ -143,8 +181,19 @@ void bleSetActive(bool active)
         Serial.println("[ble] not initialised yet — ignoring");
         return;
     }
+    // Guard: if already inactive, don't send stopAdvertising() to the co-processor.
+    // After bleReinit(), advertising was never started, so calling stopAdvertising()
+    // would send an RPC to the RTL8720DN that can hang or be ignored.
+    if (!active && !g_bleActive) return;
     g_bleActive = active;
     if (active) {
+        // Ensure ble_start() has been called before advertising — needed after
+        // WiFi scan resets the GAP state machine via wifi_off()/wifi_on().
+        if (!BLEDevice::ble_start_flags) {
+            BLEDevice::ble_start_flags = true;
+            ble_start();
+            delay(200);
+        }
         Serial.println("[ble] advertising as WT-001");
         BLEDevice::startAdvertising();
     } else {

@@ -17,6 +17,10 @@ struct BLEResult { char name[20]; char addr[18]; int rssi; };
 static BLEResult bleResults[BLE_MAX_RESULTS];
 static int       bleResultCount = 0;
 
+// Async scan completion — set from BLE stack callback, polled on main thread.
+static volatile bool g_bleScanDone = false;
+static void bleScanCallback(BLEScanResults) { g_bleScanDone = true; }
+
 // -------------------------------------------------------------------------
 static uint16_t rssiColor(int rssi)
 {
@@ -64,6 +68,11 @@ static void drawBleScanning()
     tft.setTextColor(tft.color565(0, 158, 178), nbg);
     tft.drawString("SCANNING FOR 3 SECONDS", 24, 110);
     tft.drawString("ADVERTISING PAUSED DURING SCAN", 24, 125);
+    // Footer
+    tft.fillRect(0, 219, 3, 21, tft.color565(0, 220, 245));
+    tft.setTextSize(1);
+    tft.setTextColor(tft.color565(0, 100, 118), TFT_BLACK);
+    tft.drawString("[C] CANCEL", 8, 225);
 }
 
 // -------------------------------------------------------------------------
@@ -148,18 +157,49 @@ static void drawBleScanResults()
 }
 
 // -------------------------------------------------------------------------
-static void doBleScan()
+// Returns false if the user pressed KEY_C to cancel during the scan.
+static bool doBleScan()
 {
     bleResultCount = 0;
-    if (!bleInitDone) return;
+    if (!bleInitDone) return true;
 
     bleSetActive(false);   // pause advertising — scan + advertising can't run simultaneously
     delay(200);
 
+    g_bleScanDone = false;
     BLEScan* scan = BLEDevice::getScan();
     scan->setActiveScan(true);
-    BLEScanResults raw = scan->start(3, false);   // 3-second blocking scan
+    // The async start() overload skips the ble_start() initialisation that the
+    // blocking overload performs lazily. Mirror that check here so the BLE radio
+    // is actually activated before we ask the RTL8720DN to scan.
+    if (!BLEDevice::ble_start_flags) {
+        BLEDevice::ble_start_flags = true;
+        ble_start();
+    }
+    scan->start(3, bleScanCallback, false);   // async — returns immediately
 
+    // Poll until done or KEY_C pressed (5-second safety timeout).
+    unsigned long scanStart = millis();
+    while (!g_bleScanDone && millis() - scanStart < 5000)
+    {
+        if (digitalRead(WIO_KEY_C) == LOW)
+        {
+            scan->stop();   // signals RTL8720DN to stop + releases internal semaphore
+            while (digitalRead(WIO_KEY_C) == LOW) delay(10);
+            return false;   // cancelled
+        }
+        delay(20);
+    }
+
+    // If the scan never completed (timed out), stop it and bail — calling
+    // getResults() on an incomplete scan blocks on an unreleased semaphore.
+    if (!g_bleScanDone)
+    {
+        scan->stop();
+        return true;   // no results but not cancelled
+    }
+
+    BLEScanResults raw = scan->getResults();
     int total = raw.getCount();
     for (int i = 0; i < total && bleResultCount < BLE_MAX_RESULTS; i++)
     {
@@ -195,6 +235,7 @@ static void doBleScan()
                 bleResults[i]  = bleResults[j];
                 bleResults[j]  = tmp;
             }
+    return true;
 }
 
 // -------------------------------------------------------------------------
@@ -202,8 +243,12 @@ void bleScannerScreen()
 {
     while (digitalRead(WIO_5S_PRESS) == LOW) delay(10);
 
+    // Full BLE deinit + reinit on every entry: guarantees a clean GAP state
+    // regardless of prior WiFi activity, advertising, or previous scans.
+    bleHardReset();
+
     drawBleScanning();
-    doBleScan();
+    if (!doBleScan()) { delay(50); return; }   // user cancelled during initial scan
     drawBleScanResults();
 
     while (true)
@@ -212,8 +257,14 @@ void bleScannerScreen()
         {
             while (digitalRead(WIO_5S_PRESS) == LOW) delay(10);
             drawBleScanning();
-            doBleScan();
+            if (!doBleScan()) { delay(50); return; }   // user cancelled during rescan
             drawBleScanResults();
+        }
+
+        if (digitalRead(WIO_KEY_B) == LOW)
+        {
+            while (digitalRead(WIO_KEY_B) == LOW) delay(10);
+            takeScreenshot();
         }
 
         if (digitalRead(WIO_KEY_C) == LOW)

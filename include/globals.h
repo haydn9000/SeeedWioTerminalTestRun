@@ -12,7 +12,7 @@ extern bool bleInitDone;
 
 // ---- Menu state (defined in main.cpp) ----
 extern int menuIndex;
-constexpr int MENU_COUNT = 10;
+constexpr int MENU_COUNT = 12;
 extern const char* menuItems[];
 extern bool menuNeedsRedraw;
 
@@ -59,9 +59,21 @@ void matrixRainScreen();
 // ---- pomodoro.cpp ----
 void pomodoroScreen();
 
+// ---- sdCardViewer.cpp ----
+void sdCardViewerScreen();
+
+// ---- wifiScanner.cpp ----
+void wifiScannerScreen();
+
+// ---- screenshot.cpp ----
+void takeScreenshot();
+
 // ---- bluetooth.cpp ----
 void bleInit();
 void checkBLE();
 bool isBLEConnected();
 void bleSetActive(bool active);
+void bleReinit();
+void bleHardReset();  // full deinit+reinit for BLE scan screen entry
+bool bleReinitPending();  // one-shot pop: true+cleared if WiFi scan dirtied BLE
 const char* getBLEAddress();

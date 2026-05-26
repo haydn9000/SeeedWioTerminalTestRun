@@ -288,6 +288,24 @@ static void drawPomTick()
 }
 
 // -------------------------------------------------------------------------
+// Updates only the status badge — avoids fillScreen flicker on pause/unpause.
+static void drawPomStatus()
+{
+    tft.fillRect(0, 136, 320, 16, TFT_BLACK);
+    tft.setTextSize(1);
+    if (pomRunning) {
+        tft.setTextColor(pomAccent(), TFT_BLACK);
+        tft.drawString(">> TIMER RUNNING", 12, 140);
+    } else if (pomElapMs > 0) {
+        tft.setTextColor(tft.color565(210, 175, 0), TFT_BLACK);
+        tft.drawString("|| PAUSED \u2014 PRESS TO RESUME", 12, 140);
+    } else {
+        tft.setTextColor(pomAccentDim(), TFT_BLACK);
+        tft.drawString("PRESS TO BEGIN", 12, 140);
+    }
+}
+
+// -------------------------------------------------------------------------
 void pomodoroScreen()
 {
     while (digitalRead(WIO_5S_PRESS) == LOW) delay(10);
@@ -328,7 +346,11 @@ void pomodoroScreen()
             if (pomRunning) { pomElapMs = pomElapsed(); pomRunning = false; }
             else            { pomStart  = millis();     pomRunning = true;  }
             while (digitalRead(WIO_5S_PRESS) == LOW) delay(10);
-            frameNeeded = true;
+            // Partial update: only badge + timer colour change — no fillScreen.
+            pomPrevBuf[0] = '\0';   // force timer colour refresh in drawPomTick
+            drawPomStatus();
+            drawPomTick();
+            lastSec = pomTimeLeft() / 1000;
         }
         else if (digitalRead(WIO_5S_LEFT) == LOW)   // skip phase
         {
@@ -348,6 +370,11 @@ void pomodoroScreen()
             drawPomFrame();
             drawPomTick();
             lastSec = pomTimeLeft() / 1000;
+        }
+        else if (digitalRead(WIO_KEY_B) == LOW)
+        {
+            while (digitalRead(WIO_KEY_B) == LOW) delay(10);
+            takeScreenshot();
         }
         else if (digitalRead(WIO_KEY_C) == LOW)
         {

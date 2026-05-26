@@ -10,10 +10,19 @@ static bool lisReady = false;
 //========================================================================= NAVIGATION
 // Renders the full menu to the display. Called only when something changes
 // to avoid unnecessary screen clears (which cause visible flicker).
+static const int PAGE_SIZE = 10;
+
 static void drawMenuCell(int i)
 {
-  int row = i / 2;
-  int col = i % 2;
+  // Only draw cells that belong to the currently visible page.
+  int page      = menuIndex / PAGE_SIZE;
+  int pageStart = page * PAGE_SIZE;
+  int pageEnd   = (pageStart + PAGE_SIZE < MENU_COUNT) ? pageStart + PAGE_SIZE : MENU_COUNT;
+  if (i < pageStart || i >= pageEnd) return;
+
+  int pageIndex = i - pageStart;
+  int row = pageIndex / 2;
+  int col = pageIndex % 2;
   int bx  = (col == 0) ? 10 : 162;
   int by  = 32 + row * 37;
   int bw  = 148;
@@ -61,14 +70,35 @@ void drawMenu()
   for (int xi = 8; xi < 320; xi += 14)
       tft.drawFastVLine(xi, 27, 4, tft.color565(0, 140, 165));
 
-  // --- 2-column grid (4 rows × 2 cols) ---
-  for (int i = 0; i < MENU_COUNT; i++) drawMenuCell(i);
+  // Page indicator in header (top-right corner, replaces static "NAVIGATE" when paged)
+  int totalPages = (MENU_COUNT + PAGE_SIZE - 1) / PAGE_SIZE;
+  int curPage    = menuIndex / PAGE_SIZE;
+  tft.setTextSize(1);
+  tft.setTextColor(tft.color565(0, 148, 170), tft.color565(0, 8, 20));
+  if (totalPages > 1)
+  {
+    char pgBuf[16];
+    snprintf(pgBuf, sizeof(pgBuf), "PG %d/%d", curPage + 1, totalPages);
+    tft.drawString(pgBuf, 272, 12);
+  }
+  else
+  {
+    tft.drawString("NAVIGATE", 257, 12);
+  }
+
+  // --- 2-column grid, current page only ---
+  int pageStart = curPage * PAGE_SIZE;
+  int pageEnd   = (pageStart + PAGE_SIZE < MENU_COUNT) ? pageStart + PAGE_SIZE : MENU_COUNT;
+  for (int i = pageStart; i < pageEnd; i++) drawMenuCell(i);
 
   // --- Footer ---
   tft.fillRect(0, 219, 3, 21, tft.color565(0, 220, 245));
   tft.setTextSize(1);
-tft.setTextColor(tft.color565(0, 100, 118), TFT_BLACK);
-  tft.drawString("[UP/DN] ROW   [L/R] COL   [PRESS] SELECT", 8, 225);
+  tft.setTextColor(tft.color565(0, 100, 118), TFT_BLACK);
+  if (totalPages > 1)
+    tft.drawString("[UP/DN/L/R] NAV   [PRESS] SEL   [DN] NEXT PG", 8, 225);
+  else
+    tft.drawString("[UP/DN] ROW   [L/R] COL   [PRESS] SELECT", 8, 225);
 
   drawBatteryStatus(TFT_BLACK);
 }
@@ -106,23 +136,31 @@ void navigation()
   {
     switch (menuIndex)
     {
-      case 0: homeScreen();              break;
-      case 1: sysStatsScreen();          break;
-      case 2: pomodoroScreen();          break;
-      case 3: stopwatchScreen();         break;
-      case 4: countdownTimerScreen();    break;
-      case 5: claudeUsageScreen();       break;
-      case 6: processWatchScreen();      break;
-      case 7: bleScannerScreen();        break;
-      case 8: matrixRainScreen();        break;
-      case 9: setBrightness();           break;
+      case 0:  homeScreen();              break;
+      case 1:  pomodoroScreen();          break;
+      case 2:  stopwatchScreen();         break;
+      case 3:  countdownTimerScreen();    break;
+      case 4:  claudeUsageScreen();       break;
+      case 5:  sysStatsScreen();          break;
+      case 6:  processWatchScreen();      break;
+      case 7:  wifiScannerScreen();       break;
+      case 8:  bleScannerScreen();        break;
+      case 9:  sdCardViewerScreen();      break;
+      case 10: matrixRainScreen();        break;
+      case 11: setBrightness();           break;
     }
     delay(200);
     menuNeedsRedraw = true;
     return;
   }
 
-  if (menuIndex != prev) { drawMenuCell(prev); drawMenuCell(menuIndex); }
+  if (menuIndex != prev)
+  {
+    if (menuIndex / PAGE_SIZE != prev / PAGE_SIZE)
+      drawMenu();                          // page changed — full redraw
+    else
+    { drawMenuCell(prev); drawMenuCell(menuIndex); }
+  }
 }
 
 
@@ -319,6 +357,12 @@ void homeScreen()
         {
             lastUpdate = millis();
             updateHomeSensors();
+        }
+
+        if (digitalRead(WIO_KEY_B) == LOW)
+        {
+            while (digitalRead(WIO_KEY_B) == LOW) { delay(10); }
+            takeScreenshot();
         }
 
         if (digitalRead(WIO_KEY_C) == LOW)

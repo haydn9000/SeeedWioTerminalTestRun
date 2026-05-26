@@ -128,6 +128,13 @@ void matrixRainScreen()
 
     while (true)
     {
+        // [KEY_B] take screenshot without exiting the animation
+        if (digitalRead(WIO_KEY_B) == LOW) {
+            while (digitalRead(WIO_KEY_B) == LOW) delay(10);
+            takeScreenshot();
+            while (mtxAnyKey()) delay(10);   // drain keys pressed during the SD write
+        }
+
         if (mtxAnyKey()) break;
 
         for (int c = 0; c < MTX_COLS; c++)
