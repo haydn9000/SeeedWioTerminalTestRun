@@ -65,13 +65,33 @@ Every screen has access to:
 ## Project layout
 
 ```
-src/              One .cpp per screen + main.cpp
-include/          globals.h (shared state + prototypes), lcd_backlight.hpp, RawImage.h
-tools/            Host-side utilities (Python)
-  claude_sender.py    Feed Claude usage data — USB serial or --ble
-  process_sender.py   Feed top CPU processes — USB serial or --ble
-  sysstat_sender.py   Feed PC system stats — USB serial or --ble
-  bitmap-converter/   PySide6 GUI — convert images to Wio Terminal bitmap format
+wiodeck/
+├── src/
+│   ├── main.cpp               Global definitions, setup(), loop(), screen dispatch
+│   ├── homeScreen.cpp         Menu render + joystick navigation
+│   ├── backlight.cpp          Brightness sub-screen (setBrightness)
+│   ├── battery.cpp            BQ27441-G1A I²C driver + battery overlay
+│   ├── bluetooth.cpp          BLE GATT peripheral + shared BLE infrastructure
+│   ├── claudeUsage.cpp        Claude Usage screen
+│   ├── sysStats.cpp           Sys Stats screen (arc gauges)
+│   ├── pomodoro.cpp           Pomodoro timer
+│   ├── stopwatch.cpp          Stopwatch with lap splits
+│   ├── countdownTimer.cpp     Countdown timer
+│   ├── processWatch.cpp       Top-5 CPU processes
+│   ├── wifiScanner.cpp        WiFi scanner (2.4 + 5 GHz)
+│   ├── bleScanner.cpp         BLE device scanner
+│   ├── sdCardViewer.cpp       SD card BMP viewer
+│   ├── screenshot.cpp         KEY_B: saves screen to microSD as BMP
+│   └── matrixRain.cpp         Matrix-style digital rain
+├── include/
+│   ├── globals.h              extern declarations + function prototypes
+│   ├── lcd_backlight.hpp      SAMD51 TC0 PWM backlight driver
+│   └── RawImage.h             Seeed template for raw bitmap format
+└── tools/
+    ├── claude_sender.py       Feed Claude usage data — USB serial or --ble
+    ├── process_sender.py      Feed top CPU processes — USB serial or --ble
+    ├── sysstat_sender.py      Feed PC system stats — USB serial or --ble
+    └── bitmap-converter/      PySide6 GUI — convert images to Wio Terminal bitmap format
 ```
 
 ## Host tools
