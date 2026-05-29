@@ -18,6 +18,7 @@ Optional:
     pip install bleak   # BLE transport (required for --ble mode only)
 """
 
+import ctypes
 import json
 import sys
 import time
@@ -39,16 +40,66 @@ BLE_RX_CHAR_UUID = "4e495554-494f-5500-0000-000000000002"
 POLL_INTERVAL = 2       # seconds between samples
 BAUD_RATE     = 115200
 MAX_PROCS     = 5
-MAX_NAME_LEN  = 13      # truncated to fit the display
+MAX_NAME_LEN  = 28      # truncated to fit the display
 
-# Number of logical CPUs — used to normalise per-core % to total-CPU %.
-# psutil.Process.cpu_percent() returns per-core %, not % of total system capacity.
-# Dividing by cpu_count converts it to the same 0-100 % scale as Task Manager.
+# Number of logical CPUs — used on Windows only to normalise per-core % to
+# total-CPU % (matching Task Manager).
+# On macOS/Linux, Activity Monitor and top/htop already show per-core %,
+# which is the same scale psutil returns, so no division is needed there.
 _CPU_COUNT = psutil.cpu_count(logical=True) or 1
+_NORMALISE_CPU = sys.platform == "win32"
 
 # Windows pseudo-processes that represent idle/system time, not real work.
 # psutil reports these with absurdly high per-core % on multi-core machines.
 _SKIP_NAMES = {"system idle process", "system idle", "idle"}
+
+# Cross-poll CPU measurement state.
+# Prime at the END of each collect() call, read at the START of the next.
+# The measurement window is the full inter-call interval (~2.5 s BLE, ~2 s serial)
+# which is much closer to Activity Monitor's ~5 s averaging window than a 1 s sleep.
+_primed_procs: list = []
+
+# ---- macOS phys_footprint via proc_pid_rusage (matches Activity Monitor exactly) ----
+# proc_pid_rusage() is a read-only accounting call that does NOT require task_for_pid,
+# so it works for protected system processes (WindowServer etc.) that block task_for_pid
+# even as root.  ri_phys_footprint = resident + compressed = Activity Monitor "Memory".
+# Falls back to RSS on non-macOS or any failure.
+if sys.platform == "darwin":
+    _RUSAGE_INFO_V0 = 0
+
+    class _RusageInfoV0(ctypes.Structure):
+        # Mirrors rusage_info_v0 from sys/resource.h (macOS SDK).
+        _fields_ = [
+            ("ri_uuid",               ctypes.c_uint8 * 16),
+            ("ri_user_time",          ctypes.c_uint64),
+            ("ri_system_time",        ctypes.c_uint64),
+            ("ri_pkg_idle_wkups",     ctypes.c_uint64),
+            ("ri_interrupt_wkups",    ctypes.c_uint64),
+            ("ri_pageins",            ctypes.c_uint64),
+            ("ri_wired_size",         ctypes.c_uint64),
+            ("ri_resident_size",      ctypes.c_uint64),
+            ("ri_phys_footprint",     ctypes.c_uint64),  # offset 72
+            ("ri_proc_start_abstime", ctypes.c_uint64),
+            ("ri_proc_exit_abstime",  ctypes.c_uint64),
+        ]  # sizeof == 88 bytes
+
+    _libsys = ctypes.CDLL("/usr/lib/libSystem.B.dylib", use_errno=True)
+    _libsys.proc_pid_rusage.restype  = ctypes.c_int
+    _libsys.proc_pid_rusage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
+
+    def _proc_mem_bytes(pid: int) -> int | None:
+        """Return phys_footprint in bytes — Activity Monitor 'Memory' column.
+        Returns None on failure so caller falls back to RSS."""
+        try:
+            info = _RusageInfoV0()
+            if _libsys.proc_pid_rusage(pid, _RUSAGE_INFO_V0, ctypes.byref(info)) == 0:
+                return int(info.ri_phys_footprint)
+            return None
+        except Exception:
+            return None
+else:
+    def _proc_mem_bytes(pid: int) -> int | None:  # type: ignore[misc]
+        return None
 
 
 def log(msg: str) -> None:
@@ -57,47 +108,64 @@ def log(msg: str) -> None:
 
 def collect() -> dict:
     """
-    Return top MAX_PROCS processes by CPU %, normalised to total-CPU scale.
+    Return top MAX_PROCS processes by CPU %, cross-poll measured.
 
-    Two-pass approach: prime all processes first, wait 0.5 s,
-    then read the actual percentages so they're meaningful.
-    Skips Windows idle pseudo-processes.
-    psutil.Process.cpu_percent() already returns % of total system CPU
-    capacity (it divides by the sum of all-core CPU time), so no further
-    normalisation is needed — values match Task Manager's CPU% column.
-    Memory is reported as RSS in MB.
+    Read per-process CPU counters primed in the PREVIOUS call, then prime
+    fresh counters for the NEXT call.  The measurement window is the full
+    inter-call interval (~2.5 s BLE, ~2 s serial), giving a stable average
+    comparable to Activity Monitor's display.
+
+    psutil.Process.cpu_percent() returns per-core % (0-100% per core; can
+    exceed 100% for multi-threaded processes).  On Windows, dividing by
+    cpu_count converts this to % of total CPU capacity, matching Task Manager.
+    On macOS and Linux, Activity Monitor / top already use the same per-core
+    scale psutil returns, so no division is applied there.
+
+    The first call returns empty process data (nothing was primed yet).
+    Memory is reported in MB as a float: phys_footprint (macOS, resident + compressed,
+    matches Activity Monitor) when available, otherwise RSS.  The display formats
+    values < 1000 as "###.#M" and ≥ 1000 as "#.#G".
     Also returns system-wide CPU% and RAM% as "tc" and "tm".
     """
-    # Prime per-process CPU counters AND the system-wide counter
-    psutil.cpu_percent(interval=None)
-    procs = []
-    for p in psutil.process_iter():
-        try:
-            if p.name().lower().strip() in _SKIP_NAMES:
-                continue
-            p.cpu_percent(interval=None)   # prime (returns 0.0 on first call)
-            procs.append(p)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
+    global _primed_procs
 
-    time.sleep(0.5)   # measurement window
-
+    # ---- 1. Read: system + per-process CPU since last call ------------------
     total_cpu = round(psutil.cpu_percent(interval=None), 1)
-    total_mem = round(psutil.virtual_memory().percent, 1)
+    ram = psutil.virtual_memory()
+    total_mem = round((ram.total - ram.available) / ram.total * 100, 1)
 
     data = []
-    for p in procs:
+    for p in _primed_procs:
         try:
             cpu_raw = p.cpu_percent(interval=None)
-            cpu     = round(cpu_raw / _CPU_COUNT, 1)   # per-core % → % of total CPU
-            mem_mb  = round(p.memory_info().rss / 1_048_576, 1)   # bytes → MB
-            name    = p.name()[:MAX_NAME_LEN]
+            # Windows: divide by cpu_count to match Task Manager's total-capacity scale.
+            # macOS/Linux: psutil and Activity Monitor/top already use per-core scale.
+            cpu    = round(cpu_raw / _CPU_COUNT if _NORMALISE_CPU else cpu_raw, 1)
+            fp = _proc_mem_bytes(p.pid)
+            mem_mb = fp / 1_048_576 if fp is not None else p.memory_info().rss / 1_048_576
+            name   = p.name()[:MAX_NAME_LEN]
             if cpu > 0.0:
                 data.append({"n": name, "c": cpu, "m": mem_mb})
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 
     data.sort(key=lambda x: x["c"], reverse=True)
+
+    # ---- 2. Prime: snapshot all processes for next call ---------------------
+    psutil.cpu_percent(interval=None)   # system-wide prime
+    new_procs = []
+    for p in psutil.process_iter():
+        try:
+            if p.name().lower().strip() in _SKIP_NAMES:
+                continue
+            p.cpu_percent(interval=None)   # per-process prime
+            new_procs.append(p)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            # Privileged processes (e.g. kernel_task on macOS) are silently
+            # skipped — reading their CPU stats requires root.
+            pass
+    _primed_procs = new_procs
+
     return {"p": data[:MAX_PROCS], "tc": total_cpu, "tm": total_mem, "ok": 1}
 
 
@@ -117,6 +185,7 @@ async def _ble_find(address: str | None) -> str | None:
 
 
 async def _ble_run(address: str | None) -> None:
+    collect()   # prime CPU counters; first real readings arrive on next call
     while True:
         addr = await _ble_find(address)
         if not addr:
@@ -173,11 +242,13 @@ def main() -> None:
         sys.exit(1)
 
     try:
+        collect()   # prime CPU counters; first real readings arrive on next call
         while True:
             data = collect()
             line = json.dumps(data, separators=(",", ":")) + "\n"
             ser.write(line.encode())
             log(f"Sent: {line.strip()}")
+            time.sleep(POLL_INTERVAL)
     except KeyboardInterrupt:
         log("Stopped.")
     finally:

@@ -374,6 +374,7 @@ void sysStatsScreen()
 
     uint16_t drawnVersion = sysDataVersion;
     bool     validFrame   = false;
+    uint32_t lastDataMs   = 0;
 
     while (true)
     {
@@ -386,14 +387,30 @@ void sysStatsScreen()
             bleActivated = true;
         }
 
+        // Refresh lastDataMs eagerly so a just-arrived packet can't be
+        // immediately evicted by the timeout check in the same iteration.
+        if (sysData.valid && sysDataVersion != drawnVersion)
+            lastDataMs = millis();
+
+        // Timeout: revert to no-data panel if stream stops for >6 s.
+        // sysstat_sender.py polls every 2 s, so 6 s = 3 missed packets.
+        if (sysData.valid && lastDataMs && millis() - lastDataMs > 6000)
+        {
+            sysData.valid = false;
+            sysDataVersion++;
+        }
+
         if (sysDataVersion != drawnVersion)
         {
             drawnVersion = sysDataVersion;
             if (!validFrame && sysData.valid) {
                 validFrame = true;
                 drawSysStats();
-            } else if (validFrame) {
+            } else if (validFrame && sysData.valid) {
                 updateGauges();
+            } else if (!sysData.valid) {
+                validFrame = false;
+                drawSysStats();   // shows the no-data panel
             }
         }
 

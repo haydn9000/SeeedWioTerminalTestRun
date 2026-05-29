@@ -19,8 +19,10 @@ Optional:
     pip install bleak   # BLE transport (required for --ble mode only)
 
 Credentials:
-    Reads the same OAuth token as the Claude desktop app:
-    ~/.claude/.credentials.json  (field: "accessToken")
+    Reads the same OAuth token as Claude Code:
+    - Windows/Linux: ~/.claude/.credentials.json  (field: "accessToken")
+    - macOS:         macOS Keychain entry "Claude Code-credentials" (via safeStorage)
+    Also works with the Claude desktop app's ~/.claude/.credentials.json on any platform.
 """
 
 import json
@@ -87,13 +89,8 @@ def format_reset_time(reset_ts: str) -> str:
     return f"Resets {months[dt.month - 1]} {dt.day}, {time_s} ({tz_abbr})"
 
 
-def load_token() -> str | None:
-    """Load the OAuth access token from ~/.claude/.credentials.json."""
-    creds_path = Path.home() / ".claude" / ".credentials.json"
-    if not creds_path.exists():
-        log(f"Credentials file not found: {creds_path}")
-        return None
-    blob = creds_path.read_text().strip()
+def _token_from_blob(blob: str) -> str | None:
+    """Extract accessToken from a JSON blob (handles nested structures)."""
     try:
         data = json.loads(blob)
         if isinstance(data.get("accessToken"), str):
@@ -105,6 +102,41 @@ def load_token() -> str | None:
         pass
     m = re.search(r'"accessToken"\s*:\s*"([^"]+)"', blob)
     return m.group(1) if m else None
+
+
+def load_token() -> str | None:
+    """Load the OAuth access token.
+
+    Search order:
+      1. ~/.claude/.credentials.json          — Windows / Linux flat file
+      2. macOS Keychain "Claude Code-credentials" — macOS Claude Code storage
+    """
+    # 1. Flat credentials file (Windows / Linux / macOS desktop app)
+    creds_path = Path.home() / ".claude" / ".credentials.json"
+    if creds_path.exists():
+        token = _token_from_blob(creds_path.read_text().strip())
+        if token:
+            return token
+
+    # 2. macOS Keychain — Claude Code stores credentials here via safeStorage
+    if sys.platform == "darwin":
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["security", "find-generic-password", "-s", "Claude Code-credentials", "-w"],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                token = _token_from_blob(result.stdout.strip())
+                if token:
+                    return token
+        except Exception:
+            pass
+
+    log("Could not load API token — aborting.")
+    log("  On Windows/Linux: ensure ~/.claude/.credentials.json exists (log in to Claude Code or the Claude desktop app).")
+    log("  On macOS:         ensure you are logged in to Claude Code (token stored in Keychain).")
+    return None
 
 
 def poll_api(token: str) -> dict | None:

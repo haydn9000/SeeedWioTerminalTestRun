@@ -80,7 +80,7 @@ bool parseUsageJson(const char* json)
 // -------------------------------------------------------------------------
 // Called every loop() iteration. Reads a complete newline-terminated JSON
 // string from Serial (non-blocking) and updates usageData if one is ready.
-static char serialBuf[256];
+static char serialBuf[512];
 static int  serialPos = 0;
 
 void checkSerial()
@@ -187,6 +187,19 @@ static void drawUsageRow(const char* label, float pct, int resetMins, const char
 }
 
 // -------------------------------------------------------------------------
+static void drawCybBoxCoral(int x, int y, int w, int h, uint16_t col, int t)
+{
+    tft.drawFastHLine(x,       y,       t, col);
+    tft.drawFastVLine(x,       y,       t, col);
+    tft.drawFastHLine(x+w-t,   y,       t, col);
+    tft.drawFastVLine(x+w-1,   y,       t, col);
+    tft.drawFastHLine(x,       y+h-1,   t, col);
+    tft.drawFastVLine(x,       y+h-t,   t, col);
+    tft.drawFastHLine(x+w-t,   y+h-1,   t, col);
+    tft.drawFastVLine(x+w-1,   y+h-t,   t, col);
+}
+
+// -------------------------------------------------------------------------
 // Renders the full Claude Usage screen.
 static void drawClaudeUsage()
 {
@@ -205,25 +218,13 @@ static void drawClaudeUsage()
     for (int xi = 8; xi < 320; xi += 14)
         tft.drawFastVLine(xi, 27, 4, tft.color565(155, 72, 40));
 
-    // Corner-bracket helper (coral palette) — used for no-data panel and badge.
-    auto cybBox = [](int x, int y, int w, int h, uint16_t col, int t) {
-        tft.drawFastHLine(x,       y,       t, col);
-        tft.drawFastVLine(x,       y,       t, col);
-        tft.drawFastHLine(x+w-t,   y,       t, col);
-        tft.drawFastVLine(x+w-1,   y,       t, col);
-        tft.drawFastHLine(x,       y+h-1,   t, col);
-        tft.drawFastVLine(x,       y+h-t,   t, col);
-        tft.drawFastHLine(x+w-t,   y+h-1,   t, col);
-        tft.drawFastVLine(x+w-1,   y+h-t,   t, col);
-    };
-
     if (!usageData.valid)
     {
         uint16_t nc   = tft.color565(217, 119, 87);
         uint16_t nbg  = tft.color565(14,   5,  2);
         uint16_t ndim = tft.color565(160, 100, 72);
         tft.fillRect(10, 48, 300, 160, nbg);
-        cybBox(10, 48, 300, 160, nc, 12);
+        drawCybBoxCoral(10, 48, 300, 160, nc, 12);
         tft.drawFastHLine(11, 49, 298, tft.color565(40, 15, 8));    // scan-line accent
 
         drawClaudeStar(160, 68, nc);
@@ -271,7 +272,7 @@ static void drawClaudeUsage()
 
         tft.setTextSize(1);
         tft.fillRect(badgeX, badgeY, badgeW, badgeH, badgeBg);
-        cybBox(badgeX, badgeY, badgeW, badgeH, badgeColor, 6);
+        drawCybBoxCoral(badgeX, badgeY, badgeW, badgeH, badgeColor, 6);
         tft.setTextColor(badgeColor, badgeBg);
         tft.drawString(statusText, badgeX + 8, badgeY + 4);
         drawClaudeStar(badgeX - 11, badgeY + 8, badgeColor);
@@ -283,6 +284,55 @@ static void drawClaudeUsage()
     tft.setTextSize(1);
     tft.setTextColor(tft.color565(130, 68, 42), TFT_BLACK);
     tft.drawString("[C] BACK", 8, 225);
+
+    drawBatteryStatus(TFT_BLACK);
+}
+
+// -------------------------------------------------------------------------
+// Targeted in-place update — only rewrites changing pixels so the header,
+// footer and row labels never flash.  Only called when usageData.valid.
+static void drawClaudeUsageUpdate()
+{
+    // Erase only the mutable regions of each usage row.
+    // Row 1 (SESSION, row y=38, barY=51):
+    tft.fillRect(20,  51, 228, 22, TFT_BLACK);   // bar area
+    tft.fillRect(256, 54,  52, 16, TFT_BLACK);   // pct text (size 2, max 4 chars)
+    tft.fillRect(20,  77, 290, 18, TFT_BLACK);   // two reset lines
+    // Row 2 (WEEKLY, row y=113, barY=126):
+    tft.fillRect(20,  126, 228, 22, TFT_BLACK);
+    tft.fillRect(256, 129,  52, 16, TFT_BLACK);
+    tft.fillRect(20,  152, 290, 18, TFT_BLACK);
+    // Bottom: s5h/s7d percentages + status badge + star:
+    tft.fillRect(8, 188, 308, 16, TFT_BLACK);
+
+    drawUsageRow("SESSION  (5h window)", usageData.session_pct, usageData.session_reset_mins, usageData.session_reset_str, 38);
+    drawUsageRow("WEEKLY   (7d window)", usageData.weekly_pct,  usageData.weekly_reset_mins,  usageData.weekly_reset_str,  113);
+
+    bool limited  = (strncmp(usageData.status, "limited",  7) == 0);
+    bool rejected = (strncmp(usageData.status, "rejected", 8) == 0);
+    const char* statusText = limited ? "LIMITED" : (rejected ? "REJECTED" : "ALLOWED");
+    uint16_t badgeColor    = (limited || rejected) ? tft.color565(210, 65, 55)  : tft.color565(175, 140, 60);
+    uint16_t badgeBg       = (limited || rejected) ? tft.color565(55, 18, 15)   : tft.color565(40, 32, 8);
+    int badgeW = rejected ? 70 : 58;
+    int badgeH = 16;
+    int badgeX = (320 - badgeW) / 2;
+    int badgeY = 188;
+
+    char s5h[8]; sprintf(s5h, "%d%%", (int)usageData.session_pct);
+    tft.setTextSize(2);
+    tft.setTextColor(usageColor(usageData.session_pct), TFT_BLACK);
+    tft.drawString(s5h, 28, badgeY);
+
+    char s7d[8]; sprintf(s7d, "%d%%", (int)usageData.weekly_pct);
+    tft.setTextColor(usageColor(usageData.weekly_pct), TFT_BLACK);
+    tft.drawString(s7d, 300 - (int)strlen(s7d) * 12, badgeY);
+
+    tft.setTextSize(1);
+    tft.fillRect(badgeX, badgeY, badgeW, badgeH, badgeBg);
+    drawCybBoxCoral(badgeX, badgeY, badgeW, badgeH, badgeColor, 6);
+    tft.setTextColor(badgeColor, badgeBg);
+    tft.drawString(statusText, badgeX + 8, badgeY + 4);
+    drawClaudeStar(badgeX - 11, badgeY + 8, badgeColor);
 
     drawBatteryStatus(TFT_BLACK);
 }
@@ -308,6 +358,8 @@ void claudeUsageScreen()
     drawClaudeUsage();
 
     uint16_t drawnVersion = dataVersion;
+    bool     drawnValid   = false;
+    uint32_t lastDataMs   = 0;
 
     while (true)
     {
@@ -321,10 +373,29 @@ void claudeUsageScreen()
             bleActivated = true;
         }
 
+        // Refresh lastDataMs eagerly so a just-arrived packet can't be
+        // immediately evicted by the timeout check in the same iteration.
+        if (usageData.valid && dataVersion != drawnVersion)
+            lastDataMs = millis();
+
+        // Timeout: revert to no-data panel if stream stops for >90 s.
+        // claude_sender.py polls every 60 s, so 90 s gives a 1.5× buffer.
+        if (usageData.valid && lastDataMs && millis() - lastDataMs > 90000)
+        {
+            usageData.valid = false;
+            dataVersion++;
+        }
+
         if (dataVersion != drawnVersion)
         {
+            bool validChanged = (usageData.valid != drawnValid);
             drawnVersion = dataVersion;
-            drawClaudeUsage();
+            drawnValid   = usageData.valid;
+
+            if (validChanged || !usageData.valid)
+                drawClaudeUsage();
+            else
+                drawClaudeUsageUpdate();
         }
 
         if (digitalRead(WIO_KEY_B) == LOW)

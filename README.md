@@ -110,9 +110,10 @@ python tools/claude_sender.py --ble         # BLE auto-discover
 python tools/claude_sender.py --ble AA:BB:CC:DD:EE:FF  # BLE to address
 ```
 
-Reads your Claude OAuth token from `~/.claude/.credentials.json` automatically.
+Reads your Claude OAuth token from `~/.claude/.credentials.json`, or from the macOS Keychain (`Claude Code-credentials`) if that file is absent.
 
-**`process_sender.py`** — streams top CPU-consuming processes to the Process Watch screen:
+**`process_sender.py`** — streams top CPU-consuming processes to the Process Watch screen.
+Memory shown is `phys_footprint` (resident + compressed, matching Activity Monitor) on macOS with `sudo`; falls back to RSS otherwise:
 
 ```bash
 pip install psutil pyserial        # serial mode
@@ -121,6 +122,7 @@ pip install psutil bleak           # BLE mode
 python tools/process_sender.py COM3          # Windows serial
 python tools/process_sender.py /dev/ttyACM0  # Linux/macOS serial
 python tools/process_sender.py --ble         # BLE auto-discover
+sudo python tools/process_sender.py --ble    # macOS: accurate memory (phys_footprint)
 python tools/process_sender.py --ble AA:BB:CC:DD:EE:FF  # BLE to address
 ```
 

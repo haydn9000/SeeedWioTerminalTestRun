@@ -21,8 +21,9 @@ static bool               g_bleWasConnected = false;
 static bool               g_bleActive       = false;  // true only while BLE usage screen is open
 
 // Buffer filled by the write callback; consumed by checkBLE() on the main thread.
+// 512 bytes: worst-case process JSON is ~300 bytes (5 processes × 28-char names).
 static volatile bool g_blePending = false;
-static char          g_bleBuf[256];
+static char          g_bleBuf[512];
 
 // -------------------------------------------------------------------------
 // Characteristic write callback — runs in BLE stack context.
