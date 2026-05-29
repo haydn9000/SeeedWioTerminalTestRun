@@ -145,17 +145,23 @@ def net_stats() -> tuple:
 
 
 def collect() -> dict:
-    cpu_pct       = round(psutil.cpu_percent(interval=0.5))
+    cpu_pct       = round(psutil.cpu_percent(interval=None))
     ct            = cpu_temp()
     ram           = psutil.virtual_memory()
     gpu_pct, gt, gm = gpu_stats()
     dn, up        = net_stats()
 
+    # Use (total - available) as the "used" baseline on all platforms.
+    # psutil.percent already uses this formula; deriving the GB string from
+    # the same value keeps the two numbers consistent across macOS/Windows/Linux.
+    # (On macOS, ram.used = active+wired only, which is lower than available
+    #  would suggest; on Windows, ram.used includes file cache, which is higher.)
+    ram_used = ram.total - ram.available
     return {
         "cpu": cpu_pct,
         "ct":  ct,
-        "ram": round(ram.percent),
-        "rb":  f"{ram.used / 1_073_741_824:.1f}/{ram.total / 1_073_741_824:.1f}GB",
+        "ram": round(ram_used / ram.total * 100),
+        "rb":  f"{ram_used / 1_073_741_824:.1f}/{ram.total / 1_073_741_824:.1f}GB",
         "gpu": gpu_pct,
         "gt":  gt,
         "gm":  gm,
@@ -180,6 +186,7 @@ async def _ble_find(address: str | None) -> str | None:
 
 
 async def _ble_run(address: str | None) -> None:
+    psutil.cpu_percent(interval=None)  # prime CPU counter
     net_stats()   # prime the network baseline
     while True:
         addr = await _ble_find(address)
@@ -234,6 +241,7 @@ def main() -> None:
         log(f"Could not open {port}: {e}")
         sys.exit(1)
 
+    psutil.cpu_percent(interval=None)  # prime CPU counter
     net_stats()   # prime the network baseline
 
     try:
