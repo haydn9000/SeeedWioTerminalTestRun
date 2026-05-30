@@ -85,7 +85,7 @@ static const int G_RAM_CX = 240, G_RAM_CY = 92;
 static const int G_GPU_CX = 80,  G_GPU_CY = 192;
 static const int G_VMX    = 240, G_VMY    = 192;
 
-static const int G_NET_Y = 108;
+static const int G_NET_Y = 111;
 
 // -------------------------------------------------------------------------
 static uint16_t tempColor(int t)
@@ -230,24 +230,33 @@ static void updateGauges()
     drawGauge(G_VMX,    G_VMY,    "VRAM", sysData.gpu_mem_pct, tft.color565(255, 200,   0),
               -1, nullptr);
 
-    // Network — colour-coded DN/UP strip
-    tft.fillRect(10, G_NET_Y, 300, 10, TFT_BLACK);
+    // Network — colour-coded DN/UP strip with arrow indicators
+    tft.fillRect(10, G_NET_Y, 300, 9, TFT_BLACK);
     tft.setTextSize(1);
 
     auto fmtNet = [](float mb, char* out, int sz) {
-        if (mb >= 1.0f) snprintf(out, sz, "%.1f MB/s", mb);
-        else            snprintf(out, sz, "%d KB/s",   (int)(mb * 1024.0f));
+        if      (mb >= 1.0f)    snprintf(out, sz, "%.1f MB/s", mb);
+        else if (mb >= 0.001f)  snprintf(out, sz, "%d KB/s",   (int)(mb * 1024.0f + 0.5f));
+        else                    snprintf(out, sz, "%d B/s",    (int)(mb * 1048576.0f + 0.5f));
     };
     char dn[14], up[14];
     fmtNet(sysData.net_down, dn, sizeof(dn));
     fmtNet(sysData.net_up,   up, sizeof(up));
-    char dnBuf[20], upBuf[20];
-    snprintf(dnBuf, sizeof(dnBuf), "DN %s", dn);
-    snprintf(upBuf, sizeof(upBuf), "UP %s", up);
-    tft.setTextColor(tft.color565(0,   210, 230), TFT_BLACK);   // neon cyan — download
-    tft.drawString(dnBuf, 20,  G_NET_Y);
-    tft.setTextColor(tft.color565(220,  40, 190), TFT_BLACK);   // neon magenta — upload
-    tft.drawString(upBuf, 180, G_NET_Y);
+
+    uint16_t dnCol = tft.color565(0,   210, 230);   // neon cyan  — download
+    uint16_t upCol = tft.color565(220,  40, 190);   // neon magenta — upload
+
+    // Down-arrow (▼) + label + value
+    tft.fillTriangle(20, G_NET_Y,  26, G_NET_Y,  23, G_NET_Y + 6, dnCol);
+    tft.setTextColor(dnCol, TFT_BLACK);
+    tft.drawString("DN", 30, G_NET_Y);
+    tft.drawString(dn, 48, G_NET_Y);
+
+    // Up-arrow (▲): 6px wide
+    tft.fillTriangle(175, G_NET_Y + 6,  181, G_NET_Y + 6,  178, G_NET_Y, upCol);
+    tft.setTextColor(upCol, TFT_BLACK);
+    tft.drawString("UP", 185, G_NET_Y);
+    tft.drawString(up, 203, G_NET_Y);
 }
 
 // -------------------------------------------------------------------------

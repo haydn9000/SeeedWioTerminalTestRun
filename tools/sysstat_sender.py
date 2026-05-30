@@ -22,6 +22,8 @@ Optional (install for the extras they unlock):
 """
 
 import json
+import re
+import subprocess
 import sys
 import time
 import warnings
@@ -60,6 +62,25 @@ try:
     _gpu_name = name
     print(f"[gpu] NVIDIA detected: {name}")
 except Exception:
+    pass
+
+# ---- macOS GPU name (Apple/AMD/Intel) detected via system_profiler ----
+if sys.platform == "darwin" and not _gpu_handle:
+    try:
+        out = subprocess.check_output(
+            ["system_profiler", "SPDisplaysDataType"],
+            text=True, stderr=subprocess.DEVNULL, timeout=8
+        )
+        m = re.search(r"Chipset Model:\s*(.+)", out)
+        if m:
+            _gpu_name = m.group(1).strip()
+            print(f"[gpu] macOS GPU: {_gpu_name}")
+        else:
+            print("[gpu] macOS GPU detected (name unknown)")
+    except Exception:
+        print("[gpu] macOS GPU name unavailable")
+
+if not _gpu_name and sys.platform != "darwin":
     print("[gpu] nvidia-ml-py not available — install with: pip install nvidia-ml-py")
 
 # ---- optional: Windows CPU temperature via wmi + LibreHardwareMonitor --------
@@ -115,21 +136,45 @@ def cpu_temp() -> int:
 
 def gpu_stats() -> tuple:
     """Return (usage_pct, temp_c, vram_pct) or (-1, -1, -1) if unavailable."""
-    if _gpu_handle is None:
-        return -1, -1, -1
-    try:
-        util = pynvml.nvmlDeviceGetUtilizationRates(_gpu_handle)
-        temp = pynvml.nvmlDeviceGetTemperature(_gpu_handle, pynvml.NVML_TEMPERATURE_GPU)
-        mem  = pynvml.nvmlDeviceGetMemoryInfo(_gpu_handle)
-        return util.gpu, temp, round(mem.used / mem.total * 100)
-    except Exception:
-        return -1, -1, -1
+    # NVIDIA via pynvml
+    if _gpu_handle is not None:
+        try:
+            util = pynvml.nvmlDeviceGetUtilizationRates(_gpu_handle)
+            temp = pynvml.nvmlDeviceGetTemperature(_gpu_handle, pynvml.NVML_TEMPERATURE_GPU)
+            mem  = pynvml.nvmlDeviceGetMemoryInfo(_gpu_handle)
+            return util.gpu, temp, round(mem.used / mem.total * 100)
+        except Exception:
+            return -1, -1, -1
+
+    # macOS: GPU utilization + memory via IOAccelerator
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.check_output(
+                ["ioreg", "-r", "-d", "1", "-w", "0", "-c", "IOAccelerator"],
+                text=True, stderr=subprocess.DEVNULL, timeout=3
+            )
+            m = re.search(r'"Device Utilization %"\s*=\s*(\d+)', out)
+            if not m:
+                return -1, -1, -1
+            usage = int(m.group(1))
+            used_m  = re.search(r'"In use system memory"\s*=\s*(\d+)', out)
+            alloc_m = re.search(r'"Alloc system memory"\s*=\s*(\d+)', out)
+            vram_pct = -1
+            if used_m and alloc_m:
+                alloc = int(alloc_m.group(1))
+                if alloc > 0:
+                    vram_pct = round(int(used_m.group(1)) / alloc * 100)
+            return usage, -1, vram_pct
+        except Exception:
+            return -1, -1, -1
+
+    return -1, -1, -1
 
 
 _net_prev = None
 
 def net_stats() -> tuple:
-    """Return (download_MB/s, upload_MB/s) averaged since last call."""
+    """Return (download_MB/s, upload_MB/s) across all interfaces — matches Activity Monitor."""
     global _net_prev
     c   = psutil.net_io_counters()
     now = time.monotonic()
@@ -137,26 +182,40 @@ def net_stats() -> tuple:
         _net_prev = (c.bytes_recv, c.bytes_sent, now)
         return 0.0, 0.0
     rx0, tx0, t0 = _net_prev
-    dt  = max(now - t0, 0.001)
-    dn  = (c.bytes_recv - rx0) / dt / 1_048_576
-    up  = (c.bytes_sent - tx0) / dt / 1_048_576
+    dt = max(now - t0, 0.001)
+    dn = (c.bytes_recv - rx0) / dt / 1_048_576
+    up = (c.bytes_sent - tx0) / dt / 1_048_576
     _net_prev = (c.bytes_recv, c.bytes_sent, now)
     return max(0.0, dn), max(0.0, up)
 
 
 def collect() -> dict:
-    cpu_pct       = round(psutil.cpu_percent(interval=None))
-    ct            = cpu_temp()
-    ram           = psutil.virtual_memory()
-    gpu_pct, gt, gm = gpu_stats()
-    dn, up        = net_stats()
+    cpu_pct          = round(psutil.cpu_percent(interval=None))
+    ct               = cpu_temp()
+    ram              = psutil.virtual_memory()
+    gpu_pct, gt, gm  = gpu_stats()
+    dn, up           = net_stats()
 
-    # Use (total - available) as the "used" baseline on all platforms.
-    # psutil.percent already uses this formula; deriving the GB string from
-    # the same value keeps the two numbers consistent across macOS/Windows/Linux.
-    # (On macOS, ram.used = active+wired only, which is lower than available
-    #  would suggest; on Windows, ram.used includes file cache, which is higher.)
-    ram_used = ram.total - ram.available
+    # macOS: Activity Monitor "Memory Used" = active + wired + compressed pages.
+    # psutil's (total - available) only counts active + wired, missing compressed.
+    # Use vm_stat to get the accurate figure matching Activity Monitor.
+    # Other platforms: (total - available) is correct.
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.check_output(["vm_stat"], text=True)
+            m = re.search(r"page size of (\d+)", out)
+            page_size = int(m.group(1)) if m else 4096
+            def _pages(key: str) -> int:
+                m2 = re.search(rf"{re.escape(key)}:\s+(\d+)", out)
+                return int(m2.group(1)) if m2 else 0
+            # Activity Monitor "Memory Used" = total - free - file-backed (cache).
+            # This includes active + inactive anonymous + wired + compressed pages.
+            ram_used = ram.total - (_pages("Pages free") + _pages("File-backed pages")) * page_size
+        except Exception:
+            ram_used = ram.total - ram.available
+    else:
+        ram_used = ram.total - ram.available
+
     return {
         "cpu": cpu_pct,
         "ct":  ct,
@@ -166,8 +225,8 @@ def collect() -> dict:
         "gt":  gt,
         "gm":  gm,
         "gn":  _gpu_name,
-        "nd":  round(dn, 2),
-        "nu":  round(up, 2),
+        "nd":  round(dn, 6),
+        "nu":  round(up, 6),
         "ok":  True,
     }
 
