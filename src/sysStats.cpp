@@ -4,7 +4,7 @@
 
 //========================================================================= SYS STATS
 // Receives JSON from sysstat_sender.py over USB serial.
-// Displays CPU/RAM/GPU/VRAM usage + temperatures as smooth arc gauges.
+// Displays CPU/RAM/GPU/GPU MEM usage + temperatures as smooth arc gauges.
 
 struct SysStatsData {
     int   cpu_pct;
@@ -227,7 +227,7 @@ static void updateGauges()
               -1, sysData.ram_str);
     drawGauge(G_GPU_CX, G_GPU_CY, "GPU",  sysData.gpu_pct,     tft.color565(240,  40, 200),
               sysData.gpu_temp, nullptr);
-    drawGauge(G_VMX,    G_VMY,    "VRAM", sysData.gpu_mem_pct, tft.color565(255, 200,   0),
+    drawGauge(G_VMX,    G_VMY,    "GPU MEM", sysData.gpu_mem_pct, tft.color565(255, 200,   0),
               -1, nullptr);
 
     // Network — colour-coded DN/UP strip with arrow indicators
@@ -331,7 +331,7 @@ static void drawSysStats()
             tft.color565(0,   220, 245),   // CPU  — neon cyan
             tft.color565(80,  255, 100),   // RAM  — neon green
             tft.color565(240,  40, 200),   // GPU  — neon magenta
-            tft.color565(255, 200,   0),   // VRAM — neon yellow
+            tft.color565(255, 200,   0),   // GPU MEM — neon yellow
         };
         for (int i = 0; i < 4; i++) {
             int bx = bxc[i] - GR - 4;
