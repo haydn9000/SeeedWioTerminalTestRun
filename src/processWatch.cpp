@@ -1,6 +1,6 @@
 // processWatch.cpp — Top-5 CPU process monitor.
 // Data arrives via USB serial or BLE as compact JSON:
-//   {"p":[{"n":"chrome.exe","c":25.5,"m":1.2},...], "ok":1}
+//   {"p":[{"n":"chrome.exe","c":25.5,"m":1.2},...], "tc":13, "tm":45, "ok":1}
 // Run tools/process_sender.py on the host.
 
 #include <Arduino.h>
@@ -61,7 +61,6 @@ bool parseProcessJson(const char* json)
 
     tmp.valid = (tmp.count > 0);
 
-    // Parse system totals from optional "tc" and "tm" fields
     const char* tcPtr = strstr(json, "\"tc\":");
     if (tcPtr) tmp.total_cpu = atof(tcPtr + 5);
     const char* tmPtr = strstr(json, "\"tm\":");

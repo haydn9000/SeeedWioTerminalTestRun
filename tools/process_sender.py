@@ -20,6 +20,7 @@ Optional:
 
 import ctypes
 import json
+import struct
 import sys
 import time
 import psutil
@@ -42,12 +43,10 @@ BAUD_RATE     = 115200
 MAX_PROCS     = 5
 MAX_NAME_LEN  = 28      # truncated to fit the display
 
-# Number of logical CPUs — used on Windows only to normalise per-core % to
-# total-CPU % (matching Task Manager).
-# On macOS/Linux, Activity Monitor and top/htop already show per-core %,
-# which is the same scale psutil returns, so no division is needed there.
+# Number of logical CPUs — used to normalise per-core CPU time to total-CPU
+# capacity % when computing process CPU% on Windows (matching Task Manager).
+# Not used on macOS/Linux, where psutil already returns per-core %.
 _CPU_COUNT = psutil.cpu_count(logical=True) or 1
-_NORMALISE_CPU = sys.platform == "win32"
 
 # Windows pseudo-processes that represent idle/system time, not real work.
 # psutil reports these with absurdly high per-core % on multi-core machines.
@@ -57,7 +56,10 @@ _SKIP_NAMES = {"system idle process", "system idle", "idle"}
 # Prime at the END of each collect() call, read at the START of the next.
 # The measurement window is the full inter-call interval (~2.5 s BLE, ~2 s serial)
 # which is much closer to Activity Monitor's ~5 s averaging window than a 1 s sleep.
-_primed_procs: list = []
+# Each entry is a (Process, cached_name) tuple — the name is captured during priming
+# so the read step never calls p.name() again (avoids a second OpenProcess per proc
+# on Windows, which is the main source of >6 s cycle times on Windows).
+_primed_procs: list = []  # list[tuple[psutil.Process, str]]
 
 # ---- macOS phys_footprint via proc_pid_rusage (matches Activity Monitor exactly) ----
 # proc_pid_rusage() is a read-only accounting call that does NOT require task_for_pid,
@@ -102,70 +104,172 @@ else:
         return None
 
 
+# ---- Windows fast path: NtQuerySystemInformation -------------------------
+# psutil's cpu_percent() on Windows opens an individual process handle
+# (OpenProcess + GetProcessTimes + CloseHandle) for every process in the
+# list — ~10 ms × 500 processes = 5+ seconds per cycle.  Instead, we call
+# NtQuerySystemInformation(SystemProcessInformation) once, which returns
+# CPU times for ALL processes in a single kernel call with no per-process
+# handle opens.  This brings the full collect() cycle to <50 ms on Windows.
+#
+# SYSTEM_PROCESS_INFORMATION field offsets (64-bit Windows 7+):
+#   +0   NextEntryOffset         ULONG
+#   +8   WorkingSetPrivateSize   SIZE_T (bytes) — Task Manager "Memory" column
+#   +40  UserTime                LARGE_INTEGER (100 ns units)
+#   +48  KernelTime              LARGE_INTEGER (100 ns units)
+#   +56  ImageName.Length        USHORT (byte count, divide by 2 for chars)
+#   +64  ImageName.Buffer        ULONGLONG pointer to wchar_t string
+#   +80  UniqueProcessId         ULONGLONG
+if sys.platform == 'win32':
+    import ctypes.wintypes as _wt
+    _ntdll = ctypes.WinDLL('ntdll')
+    _STATUS_SUCCESS               = 0
+    _STATUS_INFO_LENGTH_MISMATCH  = 0xC0000004
+    _SystemProcessInformation     = 5
+    _SPI_NEXT       = 0
+    _SPI_WS_PRIVATE = 8    # WorkingSetPrivateSize — Task Manager "Memory" column
+    _SPI_UTIME      = 40
+    _SPI_KTIME      = 48
+    _SPI_NAMELEN    = 56
+    _SPI_NAMEBUF    = 64
+    _SPI_PID        = 80
+
+    def _nt_query_processes() -> dict:
+        """Single NtQuerySystemInformation call → {pid: (name, cpu_100ns, ws_bytes)}."""
+        buf_size = 0x200000  # 2 MB initial; doubled on STATUS_INFO_LENGTH_MISMATCH
+        for _ in range(5):
+            buf = (ctypes.c_ubyte * buf_size)()
+            ret_len = _wt.ULONG(0)
+            status = _ntdll.NtQuerySystemInformation(
+                _SystemProcessInformation, buf, buf_size, ctypes.byref(ret_len))
+            if status == _STATUS_SUCCESS:
+                break
+            if status == _STATUS_INFO_LENGTH_MISMATCH:
+                buf_size = ret_len.value + 0x10000
+                continue
+            return {}  # unexpected NTSTATUS
+        raw = bytes(buf[:ret_len.value])
+        result = {}
+        pos = 0
+        while pos < len(raw):
+            try:
+                next_off, = struct.unpack_from('<I', raw, pos + _SPI_NEXT)
+                utime,    = struct.unpack_from('<q', raw, pos + _SPI_UTIME)
+                ktime,    = struct.unpack_from('<q', raw, pos + _SPI_KTIME)
+                nlen,     = struct.unpack_from('<H', raw, pos + _SPI_NAMELEN)
+                nbuf,     = struct.unpack_from('<Q', raw, pos + _SPI_NAMEBUF)
+                pid,      = struct.unpack_from('<Q', raw, pos + _SPI_PID)
+                ws,       = struct.unpack_from('<q', raw, pos + _SPI_WS_PRIVATE)
+                # Buffer pointer is absolute VA inside our allocated `buf`
+                name = ctypes.wstring_at(nbuf, nlen // 2) if nlen and nbuf else ''
+                result[pid] = (name, utime + ktime, ws)
+            except Exception:
+                pass
+            if not next_off:
+                break
+            pos += next_off
+        return result
+
+    _win_snapshot: dict = {}   # pid → (name, total_100ns, ws_bytes)
+    _win_snap_ts: float = 0.0
+
+    def _win_collect() -> list:
+        """Two NtQuerySystemInformation snapshots → top processes by CPU%.
+        Aggregates all instances of the same exe name into one row, matching
+        Task Manager's grouping (e.g. 35 firefox.exe processes become one entry)."""
+        global _win_snapshot, _win_snap_ts
+        now     = time.perf_counter()
+        curr    = _nt_query_processes()
+        elapsed = now - _win_snap_ts
+        agg: dict = {}   # name → [cpu_sum, ws_sum]
+        if _win_snapshot and elapsed > 0:
+            wall_100ns = elapsed * _CPU_COUNT * 1e7
+            for pid, (name, ct, ws) in curr.items():
+                if pid in _win_snapshot and name and name.lower().strip() not in _SKIP_NAMES:
+                    delta = ct - _win_snapshot[pid][1]
+                    if delta >= 0:
+                        cpu   = delta / wall_100ns * 100
+                        entry = agg.setdefault(name, [0.0, 0])
+                        entry[0] += cpu
+                        entry[1] += ws
+        _win_snapshot = curr
+        _win_snap_ts  = now
+        result = []
+        for name, (cpu_sum, ws_sum) in agg.items():
+            cpu = round(cpu_sum, 1)
+            if cpu > 0:
+                result.append({'n': name[:MAX_NAME_LEN], 'c': cpu, 'm': ws_sum / 1_048_576})
+        result.sort(key=lambda x: x['c'], reverse=True)
+        return result
+
+
 def log(msg: str) -> None:
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
 def collect() -> dict:
     """
-    Return top MAX_PROCS processes by CPU %, cross-poll measured.
+    Return top MAX_PROCS processes by CPU %, with system-wide CPU% and RAM%.
 
-    Read per-process CPU counters primed in the PREVIOUS call, then prime
-    fresh counters for the NEXT call.  The measurement window is the full
-    inter-call interval (~2.5 s BLE, ~2 s serial), giving a stable average
-    comparable to Activity Monitor's display.
+    On Windows: uses NtQuerySystemInformation(SystemProcessInformation) to
+    snapshot CPU times for all processes in a single kernel call with no
+    per-process handle opens.  Two snapshots bracketing the inter-call sleep
+    give the CPU delta.  Aggregates all instances of the same exe by name,
+    matching Task Manager's grouping.  Memory is WorkingSetPrivateSize
+    (offset +8), which matches the Task Manager "Memory" column.
 
-    psutil.Process.cpu_percent() returns per-core % (0-100% per core; can
-    exceed 100% for multi-threaded processes).  On Windows, dividing by
-    cpu_count converts this to % of total CPU capacity, matching Task Manager.
-    On macOS and Linux, Activity Monitor / top already use the same per-core
-    scale psutil returns, so no division is applied there.
+    On macOS/Linux: cross-poll via psutil — counters are primed at the END of
+    each call and read at the START of the next.  The measurement window is
+    the full inter-call interval.  Memory is phys_footprint (macOS) or RSS.
 
-    The first call returns empty process data (nothing was primed yet).
-    Memory is reported in MB as a float: phys_footprint (macOS, resident + compressed,
-    matches Activity Monitor) when available, otherwise RSS.  The display formats
-    values < 1000 as "###.#M" and ≥ 1000 as "#.#G".
+    The first call always returns empty process data (baseline not yet set).
     Also returns system-wide CPU% and RAM% as "tc" and "tm".
     """
     global _primed_procs
 
-    # ---- 1. Read: system + per-process CPU since last call ------------------
+    # ---- system-wide stats (fast single call on all platforms) ----
     total_cpu = round(psutil.cpu_percent(interval=None), 1)
     ram = psutil.virtual_memory()
     total_mem = round((ram.total - ram.available) / ram.total * 100, 1)
 
+    if sys.platform == 'win32':
+        # Single NtQuerySystemInformation call — no per-process OpenProcess.
+        data = _win_collect()
+        psutil.cpu_percent(interval=None)   # prime system-wide for next call
+        data.sort(key=lambda x: x["c"], reverse=True)
+        return {"p": data[:MAX_PROCS], "tc": total_cpu, "tm": total_mem, "ok": 1}
+
+    # ---- macOS/Linux: read per-process CPU since last prime ----------------
     data = []
-    for p in _primed_procs:
+    for p, name in _primed_procs:
         try:
             cpu_raw = p.cpu_percent(interval=None)
-            # Windows: divide by cpu_count to match Task Manager's total-capacity scale.
-            # macOS/Linux: psutil and Activity Monitor/top already use per-core scale.
-            cpu    = round(cpu_raw / _CPU_COUNT if _NORMALISE_CPU else cpu_raw, 1)
+            cpu    = round(cpu_raw, 1)
             fp = _proc_mem_bytes(p.pid)
             mem_mb = fp / 1_048_576 if fp is not None else p.memory_info().rss / 1_048_576
-            name   = p.name()[:MAX_NAME_LEN]
             if cpu > 0.0:
-                data.append({"n": name, "c": cpu, "m": mem_mb})
+                data.append({"n": name[:MAX_NAME_LEN], "c": cpu, "m": mem_mb})
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 
-    data.sort(key=lambda x: x["c"], reverse=True)
-
-    # ---- 2. Prime: snapshot all processes for next call ---------------------
+    # ---- prime for next call ----
     psutil.cpu_percent(interval=None)   # system-wide prime
     new_procs = []
     for p in psutil.process_iter():
         try:
-            if p.name().lower().strip() in _SKIP_NAMES:
-                continue
-            p.cpu_percent(interval=None)   # per-process prime
-            new_procs.append(p)
+            with p.oneshot():
+                name = p.name()
+                if name.lower().strip() in _SKIP_NAMES:
+                    continue
+                p.cpu_percent(interval=None)   # per-process prime
+            new_procs.append((p, name))
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             # Privileged processes (e.g. kernel_task on macOS) are silently
             # skipped — reading their CPU stats requires root.
             pass
     _primed_procs = new_procs
 
+    data.sort(key=lambda x: x["c"], reverse=True)
     return {"p": data[:MAX_PROCS], "tc": total_cpu, "tm": total_mem, "ok": 1}
 
 
